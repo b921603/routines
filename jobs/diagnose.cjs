@@ -40,6 +40,10 @@ async function main() {
         if (pr.code === 200) { console.log('SHAPE OK at', i + 1); break; }
         await X.sleep(600);
       }
+      console.log('== hunt ==');
+      const h = await X.hunt(u, cred, shape, 'Daily');
+      console.log('hunt http:', h.code, 'type:', Array.isArray(h.data) ? 'array' : typeof h.data);
+      console.log('hunt body:', mask(JSON.stringify(h.data) || '').slice(0, 800));
     }
   }
 }
