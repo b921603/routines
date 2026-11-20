@@ -94,9 +94,12 @@ async function main() {
     if (shape) {
       try {
         const r = await X.hunt(s.u, s.cred, shape, c.name.slice(0, 40));
-        if (r.code === 200 && Array.isArray(r.data)) {
+        if (r.code === 200) {
           const key = norm(c.name);
-          hits = r.data.filter((x) => norm(x.title).includes(key) || key.includes(norm(x.title))).length;
+          hits = r.flat.filter((x) => {
+            const t = norm(x.title || x.name);
+            return t && (t.includes(key) || key.includes(t));
+          }).length;
           present = hits > 0;
         }
       } catch (_) { /* stays unknown */ }
