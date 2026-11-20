@@ -53,6 +53,44 @@ function score(entry, rank, total) {
   return Math.min(10, rankScore + bonus * 1.5);
 }
 
+async function lookupJSON(id, mk) {
+  return fetchJSON(`https://itunes.apple.com/lookup?id=${id}&country=${mk}&entity=podcast`);
+}
+
+// enrich one candidate via itunes lookup (feed url, episode count, freshness)
+async function enrich(c) {
+  if (!c.itunes_id) return;
+  try {
+    const j = await lookupJSON(c.itunes_id, c.market || 'us');
+    const r = (j && j.results && j.results[0]) || {};
+    c.feed_url = r.feedUrl || '';
+    c.track_count = r.trackCount || 0;
+    c.release_date = r.releaseDate || '';
+    c.genre = r.primaryGenreName || '';
+    c.view_url = r.trackViewUrl || '';
+  } catch (_) { /* stays blank */ }
+}
+
+// quick rss transferability check for the top fresh candidates
+async function feedCheck(c) {
+  if (!c.feed_url) return;
+  try {
+    const u = new URL(c.feed_url);
+    const txt = await new Promise((resolve) => {
+      const req = require('https').get(u, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 30000 }, (res) => {
+        let buf = '';
+        res.on('data', (x) => { buf += x; });
+        res.on('end', () => resolve(buf));
+      });
+      req.on('timeout', () => req.destroy());
+      req.on('error', () => resolve(''));
+    });
+    const items = (txt.match(/<item>/g) || []).length;
+    const enc = (txt.match(/<enclosure[^>]+url=/g) || []).length;
+    c.feed_check = { ok: items > 0, items, enclosures: enc };
+  } catch (_) { /* stays blank */ }
+}
+
 async function main() {
   const user = process.env.SVC_USER || '';
   const pass = process.env.SVC_PASS || '';
@@ -68,13 +106,14 @@ async function main() {
       if (!name) return;
       cands.push({ name, artist: (r['im:artist'] && r['im:artist'].label) || '',
         url: (r.id && r.id.label) || '',
+        itunes_id: (r.id && r.id.attributes && r.id.attributes['im:id']) || '',
         genres: [(r.category && r.category.attributes && r.category.attributes.label) || '',
                  (r['im:genre'] && r['im:genre'].label) || ''].filter(Boolean),
         score: score(r, i, items.length), market: mk });
     });
     await X.sleep(WAF);
   }
-  // dedupe by name
+  // dedupe by name + attach itunes ids from the chart entries
   const seen = new Set();
   const list = cands.filter((c) => { const k = norm(c.name); if (seen.has(k)) return false; seen.add(k); return true; });
   list.sort((a, b) => b.score - a.score);
@@ -86,7 +125,7 @@ async function main() {
   if (s) shape = await X.lockShape(s.u, s.cred);
   if (!shape) console.log('coverage probe unavailable this round (logged as unknown)');
 
-  // 3. coverage probe per candidate
+  // 3. coverage probe per candidate (+ itunes enrichment after probing)
   const results = [];
   for (const c of list) {
     let present = null;
@@ -109,19 +148,26 @@ async function main() {
     await X.sleep(WAF);
   }
 
-  // 4. report
+  // 4. enrich metadata (feed url, episode counts, freshness) + verify top fresh feeds
+  for (const c of results) await enrich(c);
+  const freshAll = results.filter((r) => r.present === false).sort((a, b) => b.score - a.score);
+  for (const c of freshAll.slice(0, 8)) await feedCheck(c);
+
+  // 5. report
   const wk = isojwk(new Date());
   const dir = path.join(__dirname, '..', 'state');
   fs.mkdirSync(dir, { recursive: true });
   const out = { week: wk, pv: P.policy_version, at: new Date().toISOString(), candidates: results };
   fs.writeFileSync(path.join(dir, `discovery-${wk}.json`), JSON.stringify(out));
 
-  // 5. short summary: top unknowns = best takeover candidates
-  const fresh = results.filter((r) => r.present === false).slice(0, 5)
-    .map((r) => `${r.score.toFixed(1)} ${r.name.slice(0, 28)}`);
-  const msg = fresh.length ? `sweep ${wk} pv${P.policy_version}: ${fresh.join(' | ')}` : `sweep ${wk} pv${P.policy_version}: no new candidates`;
+  // 6. summary push: top takeover candidates (tap opens the private reports folder)
+  const fresh = freshAll.slice(0, 5)
+    .map((r) => `${r.score.toFixed(0)} ${r.name.slice(0, 26)}`);
+  const msg = fresh.length
+    ? `sweep ${wk} pv${P.policy_version}: ${results.filter((r) => r.present === false).length} fresh | top: ${fresh.join(' · ')}`
+    : `sweep ${wk} pv${P.policy_version}: no new candidates`;
   console.log(msg);
-  await X.notify(msg);
+  await X.notify(msg, process.env.NTFY_CLICK || '');
 }
 
 main().catch((e) => { console.log('fatal:', String(e).slice(0, 200)); process.exit(1); });
