@@ -2,7 +2,7 @@ name: podcast-sync
 
 on:
   schedule:
-    - cron: "30 14 * * *"   # 21:30 台北 · 日更
+    - cron: "45 14 * * *"   # 21:45 台北 · 日更
   workflow_dispatch:
 
 concurrency:
