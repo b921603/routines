@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const X = require('../lib/eudic.cjs');
+const DB = require('../lib/candidates.cjs');
 
 const P = X.readPolicies();
 const D = (P.discovery || {});
@@ -148,10 +149,25 @@ async function main() {
     await X.sleep(WAF);
   }
 
-  // 4. enrich metadata (feed url, episode counts, freshness) + verify top fresh feeds
+  // 4. enrich metadata + candidate-db merge (v2 metrics, scoring, history)
   for (const c of results) await enrich(c);
   const freshAll = results.filter((r) => r.present === false).sort((a, b) => b.score - a.score);
   for (const c of freshAll.slice(0, 8)) await feedCheck(c);
+  // chart ranks for the db (both markets)
+  const rank = {};
+  for (const mk of D.markets || ['us']) {
+    const j = await fetchJSON(`https://itunes.apple.com/${mk}/rss/toppodcasts/limit=${D.candidates || 40}/json`);
+    ((j && j.feed && j.feed.entry) || []).forEach((e, i) => {
+      const iid = e.id && e.id.attributes && e.id.attributes['im:id'];
+      if (iid) (rank[iid] = rank[iid] || {})[mk] = i + 1;
+    });
+    await X.sleep(WAF);
+  }
+  const week = DB.wk();
+  try {
+    const db = await DB.mergeDB(results, rank, week);
+    console.log(`db merged: ${Object.keys(db.items).length} items`);
+  } catch (e) { console.log('db merge error:', String(e).slice(0, 120)); }
 
   // 5. report
   const wk = isojwk(new Date());
