@@ -49,10 +49,11 @@ def ntfy(title, body, prio=3):
         log(f"ntfy err: {str(ex)[:60]}")
 
 
-def req(method, url, *, data=None, timeout=60, tries=6):
+def req(method, url, *, data=None, timeout=60, tries=6, headers=None):
     for k in range(tries):
         try:
-            r = SES.request(method, url, data=data, timeout=timeout)
+            r = SES.request(method, url, data=data, timeout=timeout,
+                            **({"headers": headers} if headers else {}))
             if r.status_code in (429, 502, 503):
                 raise IOError(f"HTTP {r.status_code}")
             return r
