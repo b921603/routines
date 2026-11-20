@@ -25,6 +25,65 @@ MAX_PAGES = int(os.environ.get("PATROL_MAX_PAGES", "16"))
 BANNED = re.compile(r"(RSS|同步|AI ?字幕|AI ?逐字稿|逐字稿|搬运|搬運|"
                     r"uploadprivatemedia|needAISubtitle|官方同步)")
 
+# ── P4.2 Lite 艦隊心跳：公開 GitHub API 唯讀，零 token、零寫入 ──
+FLEET = {   # repo → [(workflow 名, 靜默閾值小時)]
+    "tf-engine": [("tff-sync", 36), ("tff-rotate", 36), ("tff-keepalive", 36)],
+    "htf-engine": [("htf-sync", 36), ("htf-rotate", 36), ("htf-keepalive", 36)],
+    "routines": [("housekeeping", 36), ("sweep", 9 * 24),
+                 ("podcast-sync", 36), ("patrol", 36)],
+}
+GH = "https://api.github.com"
+GH_H = {"User-Agent": "patrol", "Accept": "application/vnd.github+json"}
+
+
+def _ago_h(iso):
+    from datetime import datetime, timezone as _tz
+    dt = datetime.strptime(iso, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=_tz.utc)
+    return (time.time() - dt.timestamp()) / 3600
+
+
+def fleet_heartbeat():
+    segs, amber = [], []
+    for repo, wfs in FLEET.items():
+        parts = []
+        try:
+            wfl = requests.get(f"{GH}/repos/b921603/{repo}/actions/workflows",
+                               headers=GH_H, timeout=30).json().get("workflows", [])
+            ids = {w["name"]: w["id"] for w in wfl}
+        except Exception:
+            segs.append(f"{repo}: ?")
+            continue
+        for wf, thr in wfs:
+            tag = wf.split("-", 1)[-1]          # tff-sync → sync
+            wid = ids.get(wf) or ids.get(wf.replace("-", " ").title())
+            if not wid:
+                parts.append(f"{tag}:?")
+                continue
+            try:
+                rr = requests.get(
+                    f"{GH}/repos/b921603/{repo}/actions/workflows/{wid}/runs?per_page=1",
+                    headers=GH_H, timeout=30).json().get("workflow_runs", [])
+                if not rr:
+                    parts.append(f"{tag}:—")
+                    continue
+                r0 = rr[0]
+                h = _ago_h(r0["created_at"])
+                c = r0.get("conclusion")
+                if r0["status"] != "completed":
+                    parts.append(f"{tag}⏳({h:.0f}h)")
+                elif c not in ("success", "skipped"):
+                    parts.append(f"{tag}✗{str(c)[:5]}({h:.0f}h)")
+                    amber.append(f"艦隊 {repo}/{wf}: conclusion={c}")
+                elif h > thr:
+                    parts.append(f"{tag}✗靜默({h:.0f}h)")
+                    amber.append(f"艦隊 {repo}/{wf}: 靜默 {h:.0f}h（閾值 {thr}h）")
+                else:
+                    parts.append(f"{tag}✓({h:.0f}h)")
+            except Exception:
+                parts.append(f"{tag}:?")
+        segs.append(repo.replace("-engine", "") + " " + " ".join(parts))
+    return "｜".join(segs), amber
+
 
 def channel_scan(cid):
     """→ (計數, 缺封面[(mid,title)], 標題 norm 集)。至空頁為止。"""
@@ -158,9 +217,12 @@ def main():
         rep["bulwark_rss"] = {"expected_4d": len(expect), "missing": missing}
         for m in missing:
             amber.append(f"Bulwark RSS 缺: {m}")
+    fb, famber = fleet_heartbeat()
+    rep["fleet"] = fb
+    amber += famber
     rep["verdict"] = "RED" if red else ("AMBER" if amber else "GREEN")
 
-    runs.insert(0, {k: rep[k] for k in ("at", "verdict", "channels", "groups", "drifts")})
+    runs.insert(0, {k: rep[k] for k in ("at", "verdict", "channels", "groups", "drifts", "fleet")})
     st["runs"] = runs[:30]
     os.makedirs(os.path.dirname(STATE_PATH) or ".", exist_ok=True)
     json.dump(st, open(STATE_PATH, "w"), ensure_ascii=False, indent=1)
@@ -170,6 +232,7 @@ def main():
     lines += [f"⚠ {d}" for d in (red + amber)[:6]]
     if rep["drifts"]:
         lines.append("漂移：" + "；".join(rep["drifts"][:3]))
+    lines.append(f"艦隊：{rep['fleet']}")
     ntfy(f"patrol: {rep['verdict']}", "\n".join(lines) or "全艦正常",
          4 if rep["verdict"] != "GREEN" else 1)
     log("patrol done")
