@@ -1,6 +1,103 @@
 {
  "runs": [
   {
+   "at": "2026-11-20 23:36:54",
+   "verdict": "GREEN",
+   "channels": {
+    "How To Fail - Specials": {
+     "count": 59,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "How To Fail With Elizabeth Day": {
+     "count": 320,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Bulwark Daily #001-100": {
+     "count": 7,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #001-100": {
+     "count": 172,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #101-200": {
+     "count": 198,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #201-300": {
+     "count": 111,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #301-400": {
+     "count": 0,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #401-500": {
+     "count": 0,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #501-600": {
+     "count": 0,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #601-700": {
+     "count": 12,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #701-800": {
+     "count": 243,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #801-900": {
+     "count": 199,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    }
+   },
+   "groups": {
+    "Tim Ferriss Show": {
+     "members": 9,
+     "desc_ok": true,
+     "cover_ok": true
+    },
+    "How To Fail With Elizabeth Day": {
+     "members": 2,
+     "desc_ok": true,
+     "cover_ok": true
+    },
+    "The Bulwark Daily": {
+     "members": 1,
+     "desc_ok": true,
+     "cover_ok": true
+    }
+   },
+   "drifts": [],
+   "fleet": "tf sync⏳(0h) rotate✓(6h) keepalive✓(3h)｜htf sync✓(2h) rotate✓(2h) keepalive✓(3h)｜routines housekeeping✓(1h) sweep✓(14h) sync✓(2h) patrol⏳(0h)"
+  },
+  {
    "at": "2026-11-20 23:13:02",
    "verdict": "GREEN",
    "channels": {
