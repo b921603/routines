@@ -1,0 +1,37 @@
+name: patrol
+
+on:
+  schedule:
+    - cron: "30 21 * * *"   # 05:30 台北 · 每日影子巡邏（錯峰於所有寫入窗口）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: patrol (read-only)
+        run: python podcast/patrol.py
+        env:
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
+          PODCAST_CID: ${{ secrets.PODCAST_CID }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+      - name: keep
+        if: always()
+        run: |
+          git config user.name "tidy"
+          git config user.email "tidy@users.noreply.github.com"
+          git add state
+          git diff --cached --quiet || git commit -m "patrol state"
+          git pull --rebase origin main || true
+          git push origin main || true

@@ -1,5 +1,5 @@
 {
-  "policy_version": 2,
+  "policy_version": 3,
   "pacing": {
     "waf_ms": 350,
     "retry_backoff_max_s": 8,
@@ -54,6 +54,53 @@
     "days_window": 4,
     "platform_ai_subtitle": true,
     "cover": "official-art",
-    "channel_capacity": 100
+    "channel_capacity": 100,
+    "owners": {
+      "The Tim Ferriss Show": {
+        "repo": "tff-sync",
+        "writer": "tfs_engine",
+        "patrol": "read-only"
+      },
+      "How To Fail": {
+        "repo": "htf engine",
+        "writer": "htf_engine",
+        "patrol": "read-only"
+      },
+      "The Bulwark Daily": {
+        "repo": "routines",
+        "writer": "podcast/bulwark_update.py",
+        "patrol": "read-only"
+      }
+    }
+  },
+  "patrol": {
+    "mode": "shadow",
+    "write": false,
+    "schedule_taipei": "05:30 daily",
+    "scope": {
+      "ship_prefixes": [
+        "The Tim Ferriss Show #",
+        "How To Fail"
+      ],
+      "groups": [
+        "Tim Ferriss Show",
+        "How To Fail With Elizabeth Day",
+        "The Bulwark Daily"
+      ],
+      "bulwark_l3_days": 4
+    },
+    "drift": [
+      "count_shrink",
+      "group_member_drop",
+      "cover_loss",
+      "desc_banned"
+    ],
+    "whitelist_p41": [
+      "ai_subtitle_requeue",
+      "channel_desc_rewrite",
+      "episode_cover_repost",
+      "group_member_rebind"
+    ],
+    "note": "P4.1 白名單預設關閉；開啟需 PATROL_WRITE=1 且僅限白名單操作"
   }
 }
