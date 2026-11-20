@@ -1,0 +1,29 @@
+name: podcast-sync
+
+on:
+  schedule:
+    - cron: "30 14 * * *"   # 21:30 台北 · 日更
+  workflow_dispatch:
+
+concurrency:
+  group: podcast-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pillow
+      - name: sync
+        run: python podcast/bulwark_update.py
+        env:
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          PODCAST_CID: ${{ secrets.PODCAST_CID }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          PODCAST_UPLOAD_TIMEOUT: "3300"
