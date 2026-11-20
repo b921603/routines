@@ -1,0 +1,47 @@
+name: housekeeping
+
+on:
+  schedule:
+    - cron: "40 16 * * *"   # 00:40 home time (main)
+    - cron: "20 19 * * *"   # 03:20 home time (sweep 1)
+    - cron: "0 22 * * *"    # 06:00 home time (sweep 2)
+    - cron: "25 4 * * *"    # 12:25 home time (sweep 3)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          architecture: x86
+
+      - name: run
+        env:
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          SHAPE_VIP: ${{ secrets.SHAPE_VIP }}
+          SHAPE_FIRST: ${{ secrets.SHAPE_FIRST }}
+          SHAPE_LAUNCH: ${{ secrets.SHAPE_LAUNCH }}
+          SHAPE_CAMP: ${{ secrets.SHAPE_CAMP }}
+          SHAPE_DEV: ${{ secrets.SHAPE_DEV }}
+        shell: pwsh
+        run: node jobs/index.cjs
+
+      - name: keep
+        if: always()
+        shell: pwsh
+        run: |
+          git config user.name "tidy"
+          git config user.email "tidy@users.noreply.github.com"
+          git add logs
+          git diff --cached --quiet || git commit -m "tidy up"
+          git push
