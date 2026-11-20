@@ -160,14 +160,17 @@ async function main() {
   const out = { week: wk, pv: P.policy_version, at: new Date().toISOString(), candidates: results };
   fs.writeFileSync(path.join(dir, `discovery-${wk}.json`), JSON.stringify(out));
 
-  // 6. summary push: top takeover candidates (tap opens the private reports folder)
+  // 6. summary push: top takeover candidates; body carries the report link so
+  //    it's tappable everywhere (click header is a bonus for the whole bubble)
   const fresh = freshAll.slice(0, 5)
     .map((r) => `${r.score.toFixed(0)} ${r.name.slice(0, 26)}`);
-  const msg = fresh.length
+  const link = process.env.NTFY_CLICK || '';
+  const msg = (fresh.length
     ? `sweep ${wk} pv${P.policy_version}: ${results.filter((r) => r.present === false).length} fresh | top: ${fresh.join(' · ')}`
-    : `sweep ${wk} pv${P.policy_version}: no new candidates`;
+    : `sweep ${wk} pv${P.policy_version}: no new candidates`) +
+    (link ? `\nreport: ${link}` : '');
   console.log(msg);
-  await X.notify(msg, process.env.NTFY_CLICK || '');
+  await X.notify(msg, link || '');
 }
 
 main().catch((e) => { console.log('fatal:', String(e).slice(0, 200)); process.exit(1); });
