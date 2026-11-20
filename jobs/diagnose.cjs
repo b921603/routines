@@ -41,9 +41,10 @@ async function main() {
         await X.sleep(600);
       }
       console.log('== hunt ==');
-      const h = await X.hunt(u, cred, shape, 'Daily');
-      console.log('hunt http:', h.code, 'type:', Array.isArray(h.data) ? 'array' : typeof h.data);
-      console.log('hunt body:', mask(JSON.stringify(h.data) || '').slice(0, 800));
+      const hrel = X.E.hunt + '?' + X.E.kWord + '=Daily&type=homepage&showtype=1&page=0&pageSize=5&classification=0';
+      const hr = await X.call('GET', hrel, null, X.hdrs(u, hrel, cred, shape));
+      console.log('hunt http:', hr.code);
+      console.log('hunt body:', mask(hr.text).slice(0, 900));
     }
   }
 }
