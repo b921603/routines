@@ -26,6 +26,11 @@ jobs:
           PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
           PODCAST_CID: ${{ secrets.PODCAST_CID }}
           NTFY_URL: ${{ secrets.NTFY_URL }}
+      - name: gate
+        run: python podcast/gate.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+
       - name: keep
         if: always()
         run: |

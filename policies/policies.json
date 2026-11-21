@@ -1,5 +1,5 @@
 {
-  "policy_version": 3,
+  "policy_version": 4,
   "pacing": {
     "waf_ms": 350,
     "retry_backoff_max_s": 8,
@@ -102,5 +102,45 @@
       "group_member_rebind"
     ],
     "note": "P4.1 白名單預設關閉；開啟需 PATROL_WRITE=1 且僅限白名單操作"
+  },
+  "pipeline": {
+    "wip_limit": 4,
+    "monthly_pit_budget": 1,
+    "steady_criteria": {
+      "completion_target": 0.95,
+      "audit_green_days": 7,
+      "fresh_sla_missing_max": 0
+    },
+    "gate": {
+      "mode": "llm_auto",
+      "llm": "gemini-2.0-flash",
+      "llm_scope": "僅在政策額度內挑選候選與給理由；額度/上限/政策變更永遠人類",
+      "always_human": [
+        "policy_number_change",
+        "wip_limit_increase",
+        "publisher_class==major"
+      ],
+      "execution": "核准≠自動開坑；執行需人類於對話觸發（開坑 <name>）"
+    },
+    "pits": [
+      {
+        "family": "tff",
+        "prefix": "The Tim Ferriss Show #",
+        "mode": "backlog",
+        "search": "The Tim Ferriss Show"
+      },
+      {
+        "family": "htf",
+        "prefix": "How To Fail",
+        "mode": "backlog",
+        "search": "How To Fail With Elizabeth Day"
+      },
+      {
+        "family": "bulwark",
+        "prefix": "The Bulwark Daily",
+        "mode": "rolling",
+        "search": "The Bulwark Daily"
+      }
+    ]
   }
 }
