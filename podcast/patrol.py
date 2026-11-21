@@ -146,6 +146,34 @@ def bulwark_l3(titles):
     return expect, missing
 
 
+def pits_report(rep):
+    """坑位完成度：backlog 模式＝平台篇數/iTunes trackCount；rolling＝RSS 對帳。"""
+    pol = {}
+    try:
+        pol = json.load(open("policies/policies.json")).get("pipeline", {})
+    except Exception:
+        pass
+    out = []
+    for p in pol.get("pits", []):
+        cnt = sum(v["count"] for k, v in rep["channels"].items()
+                  if k.startswith(p["prefix"]))
+        pit = {"family": p["family"], "mode": p["mode"], "platform": cnt}
+        if p["mode"] == "backlog":
+            exp = None
+            try:
+                r = requests.get("https://itunes.apple.com/search",
+                                 params={"term": p["search"], "media": "podcast",
+                                         "limit": 1, "country": "us"}, timeout=30)
+                res = (r.json().get("results") or [{}])[0]
+                exp = res.get("trackCount")
+            except Exception:
+                pass
+            pit["expected"] = exp
+            pit["completion"] = round(min(1.0, cnt / exp), 3) if exp else None
+        out.append(pit)
+    rep["pits"] = out
+
+
 def main():
     if os.environ.get("PATROL_WRITE") == "1":
         log("PATROL_WRITE=1 → P4.1 白名單修復尚未實裝；本版仍為只讀影子巡邏")
@@ -220,9 +248,11 @@ def main():
     fb, famber = fleet_heartbeat()
     rep["fleet"] = fb
     amber += famber
+    pits_report(rep)
     rep["verdict"] = "RED" if red else ("AMBER" if amber else "GREEN")
 
-    runs.insert(0, {k: rep[k] for k in ("at", "verdict", "channels", "groups", "drifts", "fleet")})
+    runs.insert(0, {k: rep[k] for k in ("at", "verdict", "channels", "groups",
+                                        "drifts", "fleet", "pits")})
     st["runs"] = runs[:30]
     os.makedirs(os.path.dirname(STATE_PATH) or ".", exist_ok=True)
     json.dump(st, open(STATE_PATH, "w"), ensure_ascii=False, indent=1)
