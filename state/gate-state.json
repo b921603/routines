@@ -26,6 +26,32 @@
     }
    ],
    "decision": null
+  },
+  {
+   "at": "2026-11-21 00:08:40",
+   "open": false,
+   "streak": 3,
+   "active": 3,
+   "wip": 4,
+   "budget_used": 0,
+   "pits": [
+    {
+     "family": "tff",
+     "steady": false,
+     "detail": "completion 1.0（941/894）｜streak 3/7"
+    },
+    {
+     "family": "htf",
+     "steady": false,
+     "detail": "completion 0.689（379/550）｜streak 3/7"
+    },
+    {
+     "family": "bulwark",
+     "steady": false,
+     "detail": "RSS 4天缺 0｜streak 3/7"
+    }
+   ],
+   "decision": null
   }
  ]
 }
