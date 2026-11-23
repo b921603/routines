@@ -238,6 +238,11 @@ def prep_audio(url, key):
     return [(p, j + 1, n) for j, (p, _, _) in enumerate(parts)]
 
 
+# 平台 5-槽位提示（用戶實錄 T-029）：同帳同時處理進程 ≤5，滿時 create 被拒
+# → 槽位感知退避（比一般錯誤更有耐心：槽位清空常需數分鐘）
+SLOT_BUSY = ("处理程序", "资源处理")
+
+
 def post(cid, title, thumb_fid, media_fid, desc):
     data = {"id": "", "title": title, "channelId": cid, "thumb": thumb_fid or "",
             "media": media_fid or "", "voice": "", "textAudioMode": "standard",
@@ -248,15 +253,21 @@ def post(cid, title, thumb_fid, media_fid, desc):
             "needAISubtitle": "true", "description": (desc or "")[:3000],
             "mediatype": "0", "intros": "", "istiming": "false", "timing": "",
             "html": "", "insertImage": "false", "mdChapterId": ""}
-    for k in range(6):
+    tries, slot_seen = 6, False
+    for k in range(10):
         try:
             r = req("POST", f"{BASE}/ting/uploadprivatemedia", data=data, timeout=120)
             if r.status_code == 200 and '"code":200' in (r.text or "").replace(" ", ""):
                 return True
-            log(f"  post try{k}: {r.status_code} {(r.text or '')[:80]}")
+            txt = (r.text or "")
+            if any(w in txt for w in SLOT_BUSY):
+                slot_seen = True                    # 5 槽位滿：長退避等槽位
+                log(f"  post try{k}: slot busy (5-process limit)")
+            else:
+                log(f"  post try{k}: {r.status_code} {txt[:80]}")
         except Exception as ex:
             log(f"  post try{k} err: {str(ex)[:80]}")
-        time.sleep(12 + 12 * k)
+        time.sleep((90 + 45 * k) if slot_seen else (12 + 12 * k))
     return False
 
 
