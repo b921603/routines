@@ -146,8 +146,14 @@ def bulwark_l3(titles):
     return expect, missing
 
 
+PIT_REPORTS = {   # pit-status/1 協議：引擎回報 → patrol 讀取
+    "tff": "https://raw.githubusercontent.com/b921603/tf-engine/main/trail/pit-status.json",
+    "htf": "https://raw.githubusercontent.com/b921603/htf-engine/main/trail/pit-status.json",
+}
+
+
 def pits_report(rep):
-    """坑位完成度：backlog 模式＝平台篇數/iTunes trackCount；rolling＝RSS 對帳。"""
+    """坑位完成度：優先讀引擎 pit-status/1 回報；無回報→本地估算＋備註。"""
     pol = {}
     try:
         pol = json.load(open("policies/policies.json")).get("pipeline", {})
@@ -158,18 +164,33 @@ def pits_report(rep):
         cnt = sum(v["count"] for k, v in rep["channels"].items()
                   if k.startswith(p["prefix"]))
         pit = {"family": p["family"], "mode": p["mode"], "platform": cnt}
-        if p["mode"] == "backlog":
-            exp = None
+        src = PIT_REPORTS.get(p["family"])
+        if src:
             try:
-                r = requests.get("https://itunes.apple.com/search",
-                                 params={"term": p["search"], "media": "podcast",
-                                         "limit": 1, "country": "us"}, timeout=30)
-                res = (r.json().get("results") or [{}])[0]
-                exp = res.get("trackCount")
+                r = requests.get(src, timeout=30)
+                if r.status_code == 200:
+                    rr = r.json()
+                    if rr.get("protocol") == "pit-status/1":
+                        pit.update({"source": "engine",
+                                    "completion": rr.get("completion"),
+                                    "status": rr.get("status"),
+                                    "official_total": rr.get("official_total"),
+                                    "official_available": rr.get("official_available"),
+                                    "completed_eps": rr.get("completed_eps"),
+                                    "true_missing": rr.get("true_missing"),
+                                    "reported_at": rr.get("updated_at"),
+                                    "follow_lag_days": rr.get("follow_lag_days")})
+                    else:
+                        pit["source"] = "protocol-mismatch"
+                else:
+                    pit["source"] = "report-pending"
             except Exception:
-                pass
-            pit["expected"] = exp
-            pit["completion"] = round(min(1.0, cnt / exp), 3) if exp else None
+                pit["source"] = "report-unreachable"
+        else:
+            pit["source"] = "rolling-local"
+        if "completion" not in pit and p["mode"] == "backlog":
+            # 本地估算（僅備援）：篇數含分段膨脹，僅供參考
+            pit["completion_est"] = None
         out.append(pit)
     rep["pits"] = out
 

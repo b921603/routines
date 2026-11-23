@@ -105,9 +105,17 @@ def main():
     steady = []
     for p in pits:
         if p["mode"] == "backlog":
-            ok = p.get("completion") is not None and \
-                p["completion"] >= float(crit.get("completion_target", 0.95))
-            detail = f"completion {p.get('completion')}（{p.get('platform')}/{p.get('expected')}）"
+            if p.get("source") == "engine":
+                # 引擎回報為真相源：status=complete 且跟進延遲 ≤7 天
+                lag_ok = (p.get("follow_lag_days") is None
+                          or p.get("follow_lag_days") <= 7)
+                ok = (p.get("status") == "complete") and lag_ok
+                detail = (f"engine completion {p.get('completion')} "
+                          f"（缺 {p.get('true_missing')}｜lag {p.get('follow_lag_days')}d）")
+            else:
+                ok = p.get("completion") is not None and \
+                    p["completion"] >= float(crit.get("completion_target", 0.95))
+                detail = f"completion {p.get('completion')}（本地估算）"
         else:
             miss = len((latest.get("bulwark_rss") or {}).get("missing") or [])
             ok = miss <= int(crit.get("fresh_sla_missing_max", 0))

@@ -127,19 +127,22 @@
         "family": "tff",
         "prefix": "The Tim Ferriss Show #",
         "mode": "backlog",
-        "search": "The Tim Ferriss Show"
+        "search": "The Tim Ferriss Show",
+        "status_report": "pit-status/1"
       },
       {
         "family": "htf",
         "prefix": "How To Fail",
         "mode": "backlog",
-        "search": "How To Fail With Elizabeth Day"
+        "search": "How To Fail With Elizabeth Day",
+        "status_report": "pit-status/1"
       },
       {
         "family": "bulwark",
         "prefix": "The Bulwark Daily",
         "mode": "rolling",
-        "search": "The Bulwark Daily"
+        "search": "The Bulwark Daily",
+        "status_report": "pit-status/1"
       }
     ]
   }
