@@ -53,7 +53,7 @@ async function fullAttempt(user, pass) {
   console.log('shape locked');
   const codes = {};
   let allOk = true;
-  for (const id of ['a', 'b']) {
+  for (const id of ['a', 'b', 'c', 'd']) {
     const code = await markUnit(id, s.cred, shape);
     codes[id] = code;
     const ok = code === 200 || code === 409;
