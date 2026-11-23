@@ -130,6 +130,32 @@
     }
    ],
    "decision": null
+  },
+  {
+   "at": "2026-11-23 04:00:21",
+   "open": false,
+   "streak": 4,
+   "active": 3,
+   "wip": 4,
+   "budget_used": 0,
+   "pits": [
+    {
+     "family": "tff",
+     "steady": false,
+     "detail": "engine completion 0.427 （缺 512｜lag Noned）｜streak 4/7"
+    },
+    {
+     "family": "htf",
+     "steady": false,
+     "detail": "engine completion 1.0 （缺 0｜lag -0.7d）｜streak 4/7"
+    },
+    {
+     "family": "bulwark",
+     "steady": false,
+     "detail": "RSS 4天缺 0｜streak 4/7"
+    }
+   ],
+   "decision": null
   }
  ]
 }

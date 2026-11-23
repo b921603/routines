@@ -1,0 +1,40 @@
+name: account-fleet
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "provision | report"
+        required: true
+        default: "report"
+      count:
+        description: "provision 帳數（1-3）"
+        required: false
+        default: "1"
+
+permissions:
+  contents: write
+
+jobs:
+  fleet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: fleet action
+        run: node jobs/fleet_${{ inputs.action }}.cjs
+        env:
+          FLEET_KEY: ${{ secrets.FLEET_KEY }}
+          FLEET_COUNT: ${{ inputs.count }}
+      - name: commit vault state
+        if: inputs.action == 'provision'
+        run: |
+          git config user.name "tidy"
+          git config user.email "tidy@users.noreply.github.com"
+          git add state/fleet.enc state/fleet.json
+          git diff --cached --quiet || git commit -m "fleet provision"
+          git pull --rebase origin main || true
+          git push origin main || true
