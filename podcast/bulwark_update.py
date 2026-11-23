@@ -241,6 +241,10 @@ def prep_audio(url, key):
 # 平台 5-槽位提示（用戶實錄 T-029）：同帳同時處理進程 ≤5，滿時 create 被拒
 # → 槽位感知退避（比一般錯誤更有耐心：槽位清空常需數分鐘）
 SLOT_BUSY = ("处理程序", "资源处理")
+try:
+    import eudic_slots
+except Exception:
+    eudic_slots = None
 
 
 def post(cid, title, thumb_fid, media_fid, desc):
@@ -321,7 +325,25 @@ def main():
                     continue
                 fid = upload_thumb(cover) if cover else ""
                 mid = upload_media(pf)
-                if not post(CID, ptitle, fid, mid, strip_html(e["desc"])):
+                sid = None
+                if eudic_slots and os.environ.get("GH_TOKEN"):
+                    try:
+                        sid = eudic_slots.claim("bulwark", mid, os.environ["GH_TOKEN"],
+                                                wait_min=8, ttl=300, log=log)
+                    except Exception:
+                        sid = None
+                okp = True
+                try:
+                    okp = post(CID, ptitle, fid, mid, strip_html(e["desc"]))
+                except Exception:
+                    okp = False
+                finally:
+                    if sid and not okp:
+                        try:
+                            eudic_slots.release("bulwark", sid, os.environ.get("GH_TOKEN"), log=log)
+                        except Exception:
+                            pass
+                if not okp:
                     ok_all = False
                     break
                 have.add(norm(ptitle))

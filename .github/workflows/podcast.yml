@@ -9,6 +9,9 @@ concurrency:
   group: podcast-sync
   cancel-in-progress: false
 
+permissions:
+  contents: write
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -22,6 +25,7 @@ jobs:
       - name: sync
         run: python podcast/bulwark_update.py
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SVC_USER: ${{ secrets.SVC_USER }}
           SVC_PASS: ${{ secrets.SVC_PASS }}
           PODCAST_CID: ${{ secrets.PODCAST_CID }}

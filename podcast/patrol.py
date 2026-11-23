@@ -270,10 +270,25 @@ def main():
     rep["fleet"] = fb
     amber += famber
     pits_report(rep)
+
+    # 上傳槽位統御視圖（帳號級 5 槽位；TTL 過期自動清除）
+    try:
+        sp = os.path.join(os.path.dirname(STATE_PATH) or ".", "upload_slots.json")
+        sv = json.load(open(sp)) if os.path.exists(sp) else {"slots": []}
+        now = time.time()
+        live = [x for x in sv.get("slots", []) if x.get("exp", 0) > now]
+        stale = len(sv.get("slots", [])) - len(live)
+        rep["slots"] = {"live": len(live), "stale_swept": stale, "cap": 5,
+                        "owners": sorted({x.get("owner") for x in live})}
+        if len(live) >= 5:
+            rep.setdefault("notes", []).append("upload slots 5/5 full — 跨源統御中（等待 TTL 釋放）")
+    except Exception:
+        rep["slots"] = {"live": None, "err": "read fail"}
+
     rep["verdict"] = "RED" if red else ("AMBER" if amber else "GREEN")
 
     runs.insert(0, {k: rep[k] for k in ("at", "verdict", "channels", "groups",
-                                        "drifts", "fleet", "pits")})
+                                        "drifts", "fleet", "pits", "slots")})
     st["runs"] = runs[:30]
     os.makedirs(os.path.dirname(STATE_PATH) or ".", exist_ok=True)
     json.dump(st, open(STATE_PATH, "w"), ensure_ascii=False, indent=1)
