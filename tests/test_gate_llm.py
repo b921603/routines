@@ -93,7 +93,7 @@ def main():
         return gen_ok('{"recommend": 111, "confidence": "high", "reasons": "r", "risks": "x", "done_when": "d"}')
     g.requests.post, g.requests.get = post_m1, fake_get
     time.sleep = lambda s: None
-    gs = {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"}
+    gs = {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()}
     d = g.llm_decide([], [], CANDS, pol, gs)
     t("M1 429 過載滑落次選成功", d and d["recommend"] == 111 and d["model"] == "mockjudge-2.0-flash", f"posts={len(calls['post'])}")
     t("M1b 429 計入預算", gs["llm_calls"]["n"] == 1)
@@ -103,7 +103,7 @@ def main():
         calls["post"].append(url)
         return FakeResp(503, {"error": {"message": "overload"}})
     g.requests.post = post_503
-    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"})
+    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()})
     t("M2 5xx 持續 → None", d is None, f"postsΔ={len(calls['post'])}")
 
     # M3 404 模型下架 → 重發現 → 滑落到名冊裡的下一個模型 → 成功
@@ -117,7 +117,7 @@ def main():
         return gen_ok('{"recommend": 222, "reasons": "r", "risks": "x", "done_when": "d"}')  # 正式調用成功
     g.requests.post = post_route
     g0 = calls["get"]
-    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"})
+    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()})
     t("M3 404 重發現滑落備胎成功", d and d["recommend"] == 222 and calls["get"] == g0 + 1,
       f"getΔ={calls['get']-g0} model={d.get('model') if d else None}")
 
@@ -127,7 +127,7 @@ def main():
         calls["post"].append(url)
         return FakeResp(400, {"error": {"message": "tier"}})
     g.requests.post = post_400
-    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"})
+    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()})
     t("M4 400 不重試", d is None and len(calls["post"]) == n0 + 1)
 
     # M5 安全攔截（finishReason=SAFETY 無 parts）
@@ -135,7 +135,7 @@ def main():
         calls["post"].append(url)
         return FakeResp(200, {"candidates": [{"finishReason": "SAFETY"}]})
     g.requests.post = post_safety
-    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"})
+    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()})
     t("M5 安全攔截 → None", d is None)
 
     # M6 非 JSON body
@@ -144,12 +144,12 @@ def main():
         @property
         def text(self): return "<html>proxy error</html>"
     g.requests.post = lambda url, **kw: BadJson(200, "<html>")
-    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"})
+    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()})
     t("M6 非 JSON body → None", d is None)
 
     # M7 圍欄包裹 JSON → 解析成功
     g.requests.post = lambda url, **kw: gen_ok('```json\n{"recommend": 222, "reasons": "x", "risks": "y", "done_when": "z"}\n```')
-    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"})
+    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()})
     t("M7 圍欄包裹可解析", d and d["recommend"] == 222)
 
     # M8 壞 JSON 兩次 → 修復重試後仍壞 → None
@@ -158,12 +158,12 @@ def main():
         calls["post"].append(url)
         return next(bad)
     g.requests.post = post_bad
-    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"})
+    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()})
     t("M8 壞 JSON 重試後 None", d is None, f"postsΔ={len(calls['post'])}")
 
     # M9 幻覺 ID → valid=False（硬校驗否決）
     g.requests.post = lambda url, **kw: gen_ok('{"recommend": 99999, "reasons": "x", "risks": "y", "done_when": "z"}')
-    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro"})
+    d = g.llm_decide([], [], CANDS, pol, {"llm_calls": {"ym": "2099-01", "n": 0}, "llm_model": "mockjudge-x-9.9-pro", "llm_model_at": __import__("time").time()})
     t("M9 幻覺 ID valid=False", d and d["valid"] is False)
 
     # M10 預算熔斷（不發請求）

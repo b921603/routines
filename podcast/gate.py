@@ -109,12 +109,17 @@ def _probe_ok(key, model):
     return False, res
 
 
+LLM_MODEL_TTL_DAYS = 7            # 模型快取效期：AI 迭代 3-4 週/代 → 7 天必重查名冊
+
+
 def _llm_model(key, gs):
-    """發現鏈：快取優先 → Models API 實查 → 評分排序 → 逐個探測取首個可用。
+    """發現鏈：快取（TTL 7 天）→ Models API 實查 → 評分排序 → 逐個探測取首個可用。
     探測兩輪：瞬時過載（429/5xx）退避重試一輪；結構性失效（400/404/攔截）直接出局。
     無硬編碼名字；全部探測失敗回 None（上層降級人類決策包）。"""
     c = gs.get("llm_model")
-    if c:
+    at = gs.get("llm_model_at") or 0
+    fresh = (time.time() - at) < LLM_MODEL_TTL_DAYS * 86400
+    if c and fresh:
         return c
     try:
         r = requests.get(f"{BASE}/models?key={key}&pageSize=200", timeout=30)
@@ -132,6 +137,7 @@ def _llm_model(key, gs):
                 ok, err = _probe_ok(key, cand)
                 if ok:
                     gs["llm_model"] = cand
+                    gs["llm_model_at"] = time.time()
                     log(f"llm model selected: {cand}")
                     return cand
                 if err.startswith(("http400", "http404", "blocked")):
@@ -264,6 +270,9 @@ def llm_decide(pits, steady, cands, pol, gs=None):
             if not model:
                 return None
             continue
+        if "API key not valid" in res:
+            gs["llm_key_dead"] = time.time()   # key 被吊銷——上層發 ntfy 告警
+            return None
         if res.startswith("http429") or res.startswith("http5") or res.startswith("exc:Read"):
             transient += 1                     # 瞬時過載
             time.sleep(4 * (attempt + 1))
@@ -363,6 +372,10 @@ def main():
             lines += [f"• {s['family']}: {s['detail']}" for s in steady if not s["steady"]]
         ntfy(f"gate: {'OPEN' if open_gate else 'HOLD'}", "\n".join(lines), 3)
 
+    # key 失效告警（狀態遷移才報，避免噪音）
+    if gs.get("llm_key_dead") and not gs.get("llm_key_dead_notified"):
+        ntfy("gate: GEMINI key 失效", "LLM 決策層已自動降級為人類決策包。請重新提供 key（舊 key 已吊銷或無效）。", 4)
+        gs["llm_key_dead_notified"] = True
     # LLM 決策（僅 OPEN＋本月未決時；無 key → 決策包留給人類）
     dec = None
     if open_gate and not gs.get("month_decided") and eligible_top():
