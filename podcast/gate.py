@@ -10,7 +10,7 @@
  iTunes Search API。核准≠自動開坑——執行需人類於對話觸發。
 無 GEMINI_API_KEY → 自動退回人類 gate（ntfy 附完整決策包）。
 """
-import os, json, time
+import os, json, time, re
 import requests
 from bulwark_update import ntfy, log
 
@@ -50,10 +50,17 @@ def eligible_top(n=5):
     return out[:n]
 
 
-LLM_PREF = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest",
-            "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"]
-LLM_BUDGET_MONTHLY = 60          # 額度保險絲（數字在代碼；日常 ≤31 次/月）
+# —— 動態模型選擇（零硬編碼：名字一律來自 Models API 實查）——
+# 排除清單是「模態關鍵詞」不是型號名（模態穩定；型號代號會被下架）
+EXCL = re.compile(r"(image|banana|tts|transcribe|audio|live|embed|aqa|robotics|"
+                  r"genie|lyria|research|antigravity|computer-use|streaming|"
+                  r"realtime|decision|customtools|vision|video|voice|music|omni)", re.I)
+VER = re.compile(r"gemini-(\d+)(?:\.(\d+))?")
 BASE = "https://generativelanguage.googleapis.com/v1beta"
+# 用途匹配：評審任務＝文字推理＋JSON 結構輸出。家族由名字派生：
+# pro=旗艦(質量優先) flash=均衡(月度評審剛好) lite=輕量 其他=未標家族
+TIER = [("flash-lite", 100), ("lite", 100), ("pro", 300), ("flash", 200)]
+LLM_BUDGET_MONTHLY = 60          # 額度保險絲（數字在代碼；日常 ≤31 次/月）
 # 現實語境（事實層，供 LLM 決策；不含政策數字——數字只能由代碼執行）
 FLEET_CONTEXT = (
     "既有坑位語義：TFF＝英語學習主坑（起點錨定、劇集長壽命）；"
@@ -64,29 +71,81 @@ FLEET_CONTEXT = (
 )
 
 
+def _rank_models(models):
+    """從名冊派生評分排序：版本×家族層＋preview 穩定懲罰；排除非文字模態。"""
+    ranked = []
+    for m in models or []:
+        if "generateContent" not in (m.get("supportedGenerationMethods") or []):
+            continue
+        name = (m.get("name") or "").replace("models/", "")
+        low = name.lower()
+        disp = (m.get("displayName") or "").lower()
+        if EXCL.search(low) or EXCL.search(disp) or "-exp" in low:
+            continue
+        v = VER.search(low)
+        ver = (int(v.group(1)) + int(v.group(2) or 0) / 10.0) if v else 0.0
+        tier = 150                                   # 未標家族（如代號款）
+        for pat, sc in TIER:
+            if pat in low:
+                tier = sc
+                break
+        if "preview" in low:
+            tier -= 50                               # preview 穩定性懲罰
+        ranked.append((round(ver * 1000 + tier, 1), name))
+    ranked.sort(key=lambda x: -x[0])
+    return [n for _, n in ranked]
+
+
+def _probe_ok(key, model):
+    """實彈探測：極小 schema 調用，驗證真的能出結構化 JSON（不聽名字聽行為）。
+    回 (ok, err)：err 前綴 http400/404/blocked＝永久性（跳過）；429/5xx＝瞬時（可再試）。"""
+    ok, res = _llm_call(key, model,
+                        "回覆 JSON：{\"ok\": true, \"model\": \"你的型號\"}", probe=True)
+    if ok:
+        try:
+            return json.loads(res).get("ok") is True, ""
+        except Exception:
+            return False, "exc:badjson"
+    return False, res
+
+
 def _llm_model(key, gs):
-    """模型發現：快取優先；失效→Models API 實查→偏好鏈取首個可用。"""
+    """發現鏈：快取優先 → Models API 實查 → 評分排序 → 逐個探測取首個可用。
+    探測兩輪：瞬時過載（429/5xx）退避重試一輪；結構性失效（400/404/攔截）直接出局。
+    無硬編碼名字；全部探測失敗回 None（上層降級人類決策包）。"""
     c = gs.get("llm_model")
     if c:
         return c
     try:
-        r = requests.get(f"{BASE}/models?key={key}&pageSize=100", timeout=30)
-        if r.status_code == 200:
-            ms = [m.get("name", "").replace("models/", "") for m in r.json().get("models", [])]
-            for pref in LLM_PREF:
-                if pref in ms:
-                    gs["llm_model"] = pref
-                    return pref
-            hit = next((m for m in ms if "flash" in m and "lite" not in m
-                        and "vision" not in m and "image" not in m and "tts" not in m
-                        and "embedding" not in m and "learnlm" not in m
-                        and "gemma" not in m and "veo" not in m), None)
-            if hit:
-                gs["llm_model"] = hit
-                return hit
+        r = requests.get(f"{BASE}/models?key={key}&pageSize=200", timeout=30)
+        if r.status_code != 200:
+            log(f"llm listing http{r.status_code}")
+            return None
+        ranked = _rank_models(r.json().get("models"))
+        log(f"llm discovery: {len(ranked)} candidates: {ranked[:5]}")
+        dead = set()
+        for round_ in range(2):
+            transient = []
+            for cand in ranked[:10]:
+                if cand in dead:
+                    continue
+                ok, err = _probe_ok(key, cand)
+                if ok:
+                    gs["llm_model"] = cand
+                    log(f"llm model selected: {cand}")
+                    return cand
+                if err.startswith(("http400", "http404", "blocked")):
+                    dead.add(cand)                      # 永久：下架/tier 不符/攔截
+                else:
+                    transient.append((cand, err[:50]))  # 瞬時：過載/超時
+            if not transient:
+                break
+            log(f"llm probe round{round_} transient: {transient[:3]} — backoff 15s")
+            time.sleep(15)
+        log("llm probe exhausted (all dead or overloaded)")
     except Exception as ex:
         log(f"llm discovery err: {str(ex)[:90]}")
-    return LLM_PREF[1]  # 兜底經典款
+    return None
 
 
 def _llm_budget_ok(gs):
@@ -114,26 +173,51 @@ SCHEMA = {
 }
 
 
-def _llm_call(key, model, prompt):
-    """單發調用；回 (ok, text|err)。"""
+def _llm_call(key, model, prompt, probe=False):
+    """單發調用；回 (ok, text|err)。處理：HTTP 錯誤矩陣／安全攔截／非 JSON body。"""
+    cfg = {"temperature": 0.4,
+           "response_mime_type": "application/json",
+           "response_schema": SCHEMA}
+    if probe:
+        cfg = {"temperature": 0.0, "maxOutputTokens": 2000,
+               "response_mime_type": "application/json",
+               "response_schema": {"type": "OBJECT", "properties": {
+                   "ok": {"type": "BOOLEAN"}, "model": {"type": "STRING"}}}}
     try:
         r = requests.post(
             f"{BASE}/models/{model}:generateContent?key={key}",
             json={"contents": [{"parts": [{"text": prompt}]}],
-                  "generationConfig": {"temperature": 0.4,
-                                       "response_mime_type": "application/json",
-                                       "response_schema": SCHEMA}},
+                  "generationConfig": cfg},
             timeout=60)
         if r.status_code == 429 or r.status_code >= 500:
             return False, f"http{r.status_code}"
         if r.status_code != 200:
-            msg = str(r.json().get("error", {}).get("message", ""))[:80]
+            try:
+                msg = str(r.json().get("error", {}).get("message", ""))[:80]
+            except Exception:
+                msg = (r.text or "")[:80]
             return False, f"http{r.status_code}:{msg}"
-        txt = (r.json().get("candidates") or [{}])[0].get(
-            "content", {}).get("parts", [{}])[0].get("text", "")
-        return True, (txt or "").strip()
+        try:
+            j = r.json()
+        except Exception:
+            return False, "exc:non-json body"
+        cand = (j.get("candidates") or [{}])[0]
+        parts = (cand.get("content") or {}).get("parts") or []
+        if cand.get("finishReason") in ("SAFETY", "RECITATION", "PROHIBITED_CONTENT",
+                                        "BLOCKLIST", "SPII") or not parts:
+            return False, f"blocked:{cand.get('finishReason')}"
+        return True, (parts[0].get("text") or "").strip()
     except Exception as ex:
         return False, f"exc:{str(ex)[:80]}"
+
+
+def _strip_fences(t):
+    """防模型自作主張包 ```json 圍欄。"""
+    t = (t or "").strip()
+    if t.startswith("```"):
+        t = re.sub(r"^```[a-zA-Z]*\s*", "", t)
+        t = re.sub(r"\s*```$", "", t)
+    return t
 
 
 def llm_decide(pits, steady, cands, pol, gs=None):
@@ -147,6 +231,8 @@ def llm_decide(pits, steady, cands, pol, gs=None):
     if not ok_b:
         return None
     model = os.environ.get("GEMINI_MODEL") or _llm_model(key, gs)
+    if not model:
+        return None
     prompt = (
         "你是播客搬運管線的開坑審核官。政策數字已由代碼驗證（WIP 上限/月預算/"
         "既有坑位 steady 全達標）——你只在合格候選中挑選或建議觀望，"
@@ -165,26 +251,36 @@ def llm_decide(pits, steady, cands, pol, gs=None):
     calls["n"] += 1
     gs["llm_calls"] = calls
     txt = None
-    for attempt in range(3):  # 退避重試鏈
+    transient = 0
+    for attempt in range(4):  # 退避重試鏈（含模型滑落）
         ok, res = _llm_call(key, model, prompt)
         if ok:
             txt = res
             break
         log(f"llm call attempt{attempt} [{model}]: {res[:90]}")
-        if res.startswith("http404"):          # 模型下架→重發現→續鏈
-            gs.pop("llm_model", None)
+        if res.startswith("http404") or res.startswith("http400:models/"):
+            gs.pop("llm_model", None)          # 模型下架/tier 收回→重發現→續鏈
             model = _llm_model(key, gs)
+            if not model:
+                return None
             continue
-        if res.startswith("http429") or res.startswith("http5"):
-            time.sleep(12 * (attempt + 1))
+        if res.startswith("http429") or res.startswith("http5") or res.startswith("exc:Read"):
+            transient += 1                     # 瞬時過載
+            time.sleep(4 * (attempt + 1))
+            if transient >= 2:                 # 連續過載→換模型（可能是 tier 額度）
+                gs.pop("llm_model", None)
+                model = _llm_model(key, gs)
+                if not model:
+                    return None
+                transient = 0
             continue
-        break                                  # 400 tier/key 問題——交人類
+        break                                  # 400 tier／安全攔截——交人類
     if not txt:
         return None
     d = None
     for round_ in range(2):
         try:
-            d = json.loads(txt)
+            d = json.loads(_strip_fences(txt))
             int(d.get("recommend") or 0)
             break
         except Exception:
