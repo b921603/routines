@@ -1,6 +1,139 @@
 {
  "runs": [
   {
+   "at": "2026-11-23 03:27:07",
+   "verdict": "GREEN",
+   "channels": {
+    "How To Fail - Specials": {
+     "count": 59,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "How To Fail With Elizabeth Day": {
+     "count": 320,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Bulwark Daily #001-100": {
+     "count": 7,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #001-100": {
+     "count": 172,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #101-200": {
+     "count": 198,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #201-300": {
+     "count": 201,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #301-400": {
+     "count": 203,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #401-500": {
+     "count": 0,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #501-600": {
+     "count": 88,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #601-700": {
+     "count": 239,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #701-800": {
+     "count": 243,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #801-900": {
+     "count": 199,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    }
+   },
+   "groups": {
+    "Tim Ferriss Show": {
+     "members": 9,
+     "desc_ok": true,
+     "cover_ok": true
+    },
+    "How To Fail With Elizabeth Day": {
+     "members": 2,
+     "desc_ok": true,
+     "cover_ok": true
+    },
+    "The Bulwark Daily": {
+     "members": 1,
+     "desc_ok": true,
+     "cover_ok": true
+    }
+   },
+   "drifts": [],
+   "fleet": "tf sync⏳(0h) rotate✓(5h) keepalive✓(8h)｜htf sync✓(0h) rotate✓(2h) keepalive✓(8h)｜routines housekeeping✓(1h) sweep✓(7h) sync✓(7h) patrol⏳(0h)",
+   "pits": [
+    {
+     "family": "tff",
+     "mode": "backlog",
+     "platform": 1543,
+     "source": "engine",
+     "completion": 0.427,
+     "status": "in_progress",
+     "official_total": 893,
+     "official_available": 892,
+     "completed_eps": 381,
+     "true_missing": 512,
+     "reported_at": "2026-11-23T03:22:52Z",
+     "follow_lag_days": null
+    },
+    {
+     "family": "htf",
+     "mode": "backlog",
+     "platform": 379,
+     "source": "engine",
+     "completion": 1.0,
+     "status": "complete",
+     "official_total": 413,
+     "official_available": 413,
+     "completed_eps": 413,
+     "true_missing": 0,
+     "reported_at": "2026-11-23T03:30:58Z",
+     "follow_lag_days": -0.7
+    },
+    {
+     "family": "bulwark",
+     "mode": "rolling",
+     "platform": 7,
+     "source": "rolling-local"
+    }
+   ]
+  },
+  {
    "at": "2026-11-23 01:52:43",
    "verdict": "GREEN",
    "channels": {
