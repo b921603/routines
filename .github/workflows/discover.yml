@@ -38,5 +38,5 @@ jobs:
           git config user.name "b921603"
           git config user.email "b921603@users.noreply.github.com"
           git add state logs
-          git diff --cached --quiet || git commit -m "tidy up"
+          git diff --cached --quiet || git commit -m "state sync"
           git push

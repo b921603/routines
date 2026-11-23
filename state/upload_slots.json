@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 {"v": 1, "slots": [], "updated": 1795437772}
+=======
+{"v": 1, "slots": [{"slot": 1, "owner": "tff", "media": "4abfab31-c68c-4c59-b5fc-93990014b417", "at": 1795458812, "exp": 1795459412}], "updated": 1795458812}
+>>>>>>> 28e5db5 (slots: 1 active)
