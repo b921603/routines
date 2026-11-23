@@ -50,41 +50,167 @@ def eligible_top(n=5):
     return out[:n]
 
 
-def llm_decide(pits, steady, cands, pol):
-    """Gemini 在政策額度內挑選（response_mime_type=json 強制結構化輸出）。"""
+LLM_PREF = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest",
+            "gemini-2.5-flash-lite", "gemini-2.0-flash-lite"]
+LLM_BUDGET_MONTHLY = 60          # 額度保險絲（數字在代碼；日常 ≤31 次/月）
+BASE = "https://generativelanguage.googleapis.com/v1beta"
+# 現實語境（事實層，供 LLM 決策；不含政策數字——數字只能由代碼執行）
+FLEET_CONTEXT = (
+    "既有坑位語義：TFF＝英語學習主坑（起點錨定、劇集長壽命）；"
+    "HTF＝失敗美學／情感共鳴（名人訪談）；Bulwark＝時事評論（日更、法律 major 風源）。"
+    "用戶優先級：比賽展示第一、完成度債優先清償、維護預算保守。"
+    "平台現實：歐路免費帳號每頻道資源上限小、上傳帶寬有限→新坑日更成本高，"
+    "週更/長錄製節目優於日更（Bulwark 類時事坑除外，已有專線）。"
+)
+
+
+def _llm_model(key, gs):
+    """模型發現：快取優先；失效→Models API 實查→偏好鏈取首個可用。"""
+    c = gs.get("llm_model")
+    if c:
+        return c
+    try:
+        r = requests.get(f"{BASE}/models?key={key}&pageSize=100", timeout=30)
+        if r.status_code == 200:
+            ms = [m.get("name", "").replace("models/", "") for m in r.json().get("models", [])]
+            for pref in LLM_PREF:
+                if pref in ms:
+                    gs["llm_model"] = pref
+                    return pref
+            hit = next((m for m in ms if "flash" in m and "lite" not in m
+                        and "vision" not in m and "image" not in m and "tts" not in m
+                        and "embedding" not in m and "learnlm" not in m
+                        and "gemma" not in m and "veo" not in m), None)
+            if hit:
+                gs["llm_model"] = hit
+                return hit
+    except Exception as ex:
+        log(f"llm discovery err: {str(ex)[:90]}")
+    return LLM_PREF[1]  # 兜底經典款
+
+
+def _llm_budget_ok(gs):
+    ym = time.strftime("%Y-%m")
+    b = gs.get("llm_calls") or {}
+    if b.get("ym") != ym:
+        b = {"ym": ym, "n": 0}
+    if b["n"] >= LLM_BUDGET_MONTHLY:
+        log("llm budget exhausted this month")
+        return False, b
+    return True, b
+
+
+SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "recommend": {"type": "INTEGER"},
+        "confidence": {"type": "STRING", "enum": ["high", "med", "low"]},
+        "reasons": {"type": "STRING"},
+        "risks": {"type": "STRING"},
+        "done_when": {"type": "STRING"},
+        "evidence": {"type": "STRING"},
+    },
+    "required": ["recommend", "reasons", "risks", "done_when"],
+}
+
+
+def _llm_call(key, model, prompt):
+    """單發調用；回 (ok, text|err)。"""
+    try:
+        r = requests.post(
+            f"{BASE}/models/{model}:generateContent?key={key}",
+            json={"contents": [{"parts": [{"text": prompt}]}],
+                  "generationConfig": {"temperature": 0.4,
+                                       "response_mime_type": "application/json",
+                                       "response_schema": SCHEMA}},
+            timeout=60)
+        if r.status_code == 429 or r.status_code >= 500:
+            return False, f"http{r.status_code}"
+        if r.status_code != 200:
+            msg = str(r.json().get("error", {}).get("message", ""))[:80]
+            return False, f"http{r.status_code}:{msg}"
+        txt = (r.json().get("candidates") or [{}])[0].get(
+            "content", {}).get("parts", [{}])[0].get("text", "")
+        return True, (txt or "").strip()
+    except Exception as ex:
+        return False, f"exc:{str(ex)[:80]}"
+
+
+def llm_decide(pits, steady, cands, pol, gs=None):
+    """Gemini 在政策額度內挑選。圍欄：schema 強制結構＋硬校驗＋一次修復重試＋
+    失敗矩陣（429/5xx 退避→人類包；404 模型下架→重發現；任何失敗只降級不阻塞）。"""
     key = os.environ.get("GEMINI_API_KEY", "")
     if not key or not cands:
         return None
+    gs = gs if gs is not None else {}
+    ok_b, calls = _llm_budget_ok(gs)
+    if not ok_b:
+        return None
+    model = os.environ.get("GEMINI_MODEL") or _llm_model(key, gs)
     prompt = (
-        "你是播客搬運管線的開坑審核官。政策數字已由代碼驗證（WIP 上限/預算/"
-        "既有坑位 steady 全達標）——你只在合格候選中挑選或建議觀望，無權放寬約束。\n"
+        "你是播客搬運管線的開坑審核官。政策數字已由代碼驗證（WIP 上限/月預算/"
+        "既有坑位 steady 全達標）——你只在合格候選中挑選或建議觀望，"
+        "無權放寬任何約束（政策否決權屬於代碼與人類）。\n"
+        + FLEET_CONTEXT + "\n"
         f"現有坑位：{json.dumps(pits, ensure_ascii=False)}\n"
         f"steady 判定：{json.dumps(steady, ensure_ascii=False)}\n"
         f"合格候選 Top{len(cands)}：{json.dumps(cands, ensure_ascii=False)}\n"
         "評選規則：學習價值＞更新穩定性＞法律低風險（independent＞mid＞major）；"
-        "避免與現有坑位主題高度重疊；可以推薦 none（觀望，並說明缺什麼證據）。\n"
-        '僅輸出 JSON：{"recommend": <itunes_id 或 0>, "reasons": "...", '
-        '"risks": "...", "done_when": "..."}'
+        "避免與既有坑位語義重疊；節目型態需匹配上傳帶寬現實。"
+        "證據紀律：理由必須引用輸入欄位（evidence 欄註明引用了哪些欄位）；"
+        "輸入不足就 recommend=0（觀望）並在 done_when 說明缺什麼證據。\n"
+        '僅輸出 JSON：{"recommend": <itunes_id 或 0>, "confidence": "high|med|low", '
+        '"reasons": "...", "risks": "...", "done_when": "...", "evidence": "..."}'
     )
-    model = os.environ.get("GEMINI_MODEL") or pol.get("gate", {}).get("llm", "gemini-2.0-flash")
-    try:
-        r = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}",
-            json={"contents": [{"parts": [{"text": prompt}]}],
-                  "generationConfig": {"temperature": 0.4,
-                                       "response_mime_type": "application/json"}},
-            timeout=60)
-        txt = r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-        d = json.loads(txt)
-        rid = int(d.get("recommend") or 0)
-        valid = any(c["itunes_id"] == rid for c in cands) if rid else True
-        return {"recommend": rid, "reasons": (d.get("reasons") or "")[:400],
-                "risks": (d.get("risks") or "")[:300],
-                "done_when": (d.get("done_when") or "")[:300],
-                "valid": valid, "model": model}
-    except Exception as ex:
-        log(f"llm decide err: {str(ex)[:110]}")
+    calls["n"] += 1
+    gs["llm_calls"] = calls
+    txt = None
+    for attempt in range(3):  # 退避重試鏈
+        ok, res = _llm_call(key, model, prompt)
+        if ok:
+            txt = res
+            break
+        log(f"llm call attempt{attempt} [{model}]: {res[:90]}")
+        if res.startswith("http404"):          # 模型下架→重發現→續鏈
+            gs.pop("llm_model", None)
+            model = _llm_model(key, gs)
+            continue
+        if res.startswith("http429") or res.startswith("http5"):
+            time.sleep(12 * (attempt + 1))
+            continue
+        break                                  # 400 tier/key 問題——交人類
+    if not txt:
         return None
+    d = None
+    for round_ in range(2):
+        try:
+            d = json.loads(txt)
+            int(d.get("recommend") or 0)
+            break
+        except Exception:
+            if round_ == 0:                    # 一次修復重試（帶錯誤回饋）
+                ok, res = _llm_call(key, model, prompt + (
+                    f"\n你的上一個輸出不是合法 JSON（錯誤：{txt[:60]}）。"
+                    "重新輸出，僅 JSON，無其他文字。"))
+                if not ok:
+                    return None
+                txt = res
+            else:
+                return None
+    if not isinstance(d, dict):
+        return None
+    try:
+        rid = int(d.get("recommend") or 0)
+    except Exception:
+        return None
+    valid = any(c["itunes_id"] == rid for c in cands) if rid else True
+    return {"recommend": rid,
+            "confidence": (d.get("confidence") or "")[:10],
+            "reasons": (d.get("reasons") or "")[:400],
+            "risks": (d.get("risks") or "")[:300],
+            "done_when": (d.get("done_when") or "")[:300],
+            "evidence": (d.get("evidence") or "")[:200],
+            "valid": valid, "model": model}
 
 
 def main():
@@ -144,7 +270,7 @@ def main():
     # LLM 決策（僅 OPEN＋本月未決時；無 key → 決策包留給人類）
     dec = None
     if open_gate and not gs.get("month_decided") and eligible_top():
-        dec = llm_decide(pits, steady, eligible_top(), pol)
+        dec = llm_decide(pits, steady, eligible_top(), pol, gs)
         if dec and dec["valid"] and dec["recommend"]:
             c = next((c for c in eligible_top() if c["itunes_id"] == dec["recommend"]), None)
             gs.setdefault("approvals", []).append(
