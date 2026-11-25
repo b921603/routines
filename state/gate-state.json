@@ -208,6 +208,47 @@
     }
    ],
    "decision": null
+  },
+  {
+   "at": "2026-11-25 14:26:47",
+   "open": false,
+   "streak": 0,
+   "active": 3,
+   "wip": 4,
+   "budget_used": 0,
+   "pits": [
+    {
+     "family": "tff",
+     "steady": false,
+     "detail": "engine completion 1.001 （缺 0｜lag —）｜streak 0/7"
+    },
+    {
+     "family": "htf",
+     "steady": false,
+     "detail": "engine completion 1.0 （缺 0｜lag -0.1d）｜streak 0/7"
+    },
+    {
+     "family": "bulwark",
+     "steady": true,
+     "detail": "paused（用戶裁示 11-25）——不計入補完條件"
+    },
+    {
+     "family": "ob",
+     "steady": false,
+     "detail": "completion None（本地估算）｜streak 0/7"
+    }
+   ],
+   "decision": {
+    "recommend": 1484511465,
+    "valid": true
+   }
   }
- ]
+ ],
+ "llm_model_at": 1795616805.3150315,
+ "net_calls": 1,
+ "llm_calls": {
+  "ym": "2026-11",
+  "n": 2
+ },
+ "llm_model": "gemini-3.5-flash-lite"
 }

@@ -1,0 +1,222 @@
+[
+ {
+  "node": "model_probe",
+  "model": "gemini-4-argon",
+  "ok": false,
+  "err": "http429",
+  "latency_ms": 143,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:25:40"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-4-carbon",
+  "ok": false,
+  "err": "http429",
+  "latency_ms": 135,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:25:40"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-4-hydrogen",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 923,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:25:41"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-4-neon",
+  "ok": false,
+  "err": "http429",
+  "latency_ms": 113,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:25:41"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.8-flash",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 442,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:25:41"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.7-flash",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 415,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:25:42"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.6-flash",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 288,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:25:42"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.5-flash",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 511,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:25:43"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.5-flash-lite",
+  "ok": true,
+  "err": "",
+  "latency_ms": 6101,
+  "prompt_chars": 37,
+  "output": "{\"model\": \"gpt-4o\", \"ok\": true}",
+  "at": "14:25:49"
+ },
+ {
+  "node": "N1_screen",
+  "model": "gemini-3.5-flash-lite",
+  "ok": true,
+  "err": "",
+  "latency_ms": 1040,
+  "prompt_chars": 1401,
+  "output": "{\"recommend\": 1, \"reasons\": \"Filtered out redundant or high-frequency shows and kept Cautionary Tales for perennial high-value learning.\", \"risks\": \"Resource limits on daily uploads if frequency changes.\", \"done_when\": \"Initial screening pipeline executed.\", \"confidence\": \"high\", \"evidence\": \"Candidate scores and metadata provided.\"}",
+  "at": "14:25:50"
+ },
+ {
+  "node": "decision",
+  "model": "gemini-3.5-flash-lite",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 18307,
+  "prompt_chars": 3919,
+  "output": "",
+  "at": "14:26:08"
+ },
+ {
+  "node": "decision",
+  "model": "gemini-3.5-flash-lite",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 5040,
+  "prompt_chars": 3919,
+  "output": "",
+  "at": "14:26:21"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-4-argon",
+  "ok": false,
+  "err": "http429",
+  "latency_ms": 127,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:26:37"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-4-carbon",
+  "ok": false,
+  "err": "http429",
+  "latency_ms": 195,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:26:38"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-4-hydrogen",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 534,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:26:38"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-4-neon",
+  "ok": false,
+  "err": "http429",
+  "latency_ms": 131,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:26:38"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.8-flash",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 1468,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:26:40"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.7-flash",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 544,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:26:40"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.6-flash",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 1066,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:26:41"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.5-flash",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 2782,
+  "prompt_chars": 37,
+  "output": "",
+  "at": "14:26:44"
+ },
+ {
+  "node": "model_probe",
+  "model": "gemini-3.5-flash-lite",
+  "ok": true,
+  "err": "",
+  "latency_ms": 718,
+  "prompt_chars": 37,
+  "output": "{\"ok\": true}",
+  "at": "14:26:45"
+ },
+ {
+  "node": "decision",
+  "model": "gemini-3.5-flash-lite",
+  "ok": true,
+  "err": "",
+  "latency_ms": 1773,
+  "prompt_chars": 3919,
+  "output": "{\n  \"recommend\": 1484511465,\n  \"reasons\": \"Cautionary Tales with Tim Harford 符合雋永亮點原則，其 perennial 分數為 12（≥10 的硬證據），learning 分數 13，探討人類行為、決策與失敗歷史，完美契合心智與失敗修復類主題，且每週更新 cadence (1.1) 符合帶寬現實與 independent 法律風險要求。\",\n  \"risks\": \"該節目每集平均時長約 38.7 分鐘，需注意上傳頻寬及逐字稿對齊與資源消耗。\",\n  \"done_when\": \"確認歐路免費帳號空間與上傳頻寬足夠承載每週約 38.7 分鐘的長錄製節目，並完成自動化管線對接。\",\n  \"confidence\": \"high\",\n  \"evidence\": \"itunes_id: 1484511465, perennial: 12, learning: 13, cadence: 1.1, legal: independent, median_min: 38.7, transcript_tag: true\"\n}",
+  "at": "14:26:47"
+ }
+]
