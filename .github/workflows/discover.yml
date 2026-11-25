@@ -37,12 +37,10 @@ jobs:
         run: |
           git config user.name "b921603"
           git config user.email "b921603@users.noreply.github.com"
-          git add state logs
+          # 只提交 sweep 產物——upload_slots.json 是運行時協調檔（槽位統御），絕不整包掃（11-25 衝突污染教訓）
+          git add state/candidates.json state/discovery-*.json logs
           git diff --cached --quiet || git commit -m "state sync"
-          git pull --rebase origin main
-          git push
-          if ($LASTEXITCODE -ne 0) {
-            Start-Sleep -Seconds 8
-            git pull --rebase origin main
-            git push
+          if (git pull --rebase origin main) { git push } else {
+            git rebase --abort 2>$null
+            Write-Output "rebase conflict — skip push this round (retry next sweep)"
           }
