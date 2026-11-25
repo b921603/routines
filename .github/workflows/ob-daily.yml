@@ -39,6 +39,11 @@ jobs:
           import ob_update
           assert callable(ob_update.main) and callable(ob_update.emit_pit)
           print('smoke OK')"
+      - name: preflight (six-iteration scar regression; deploy-gating)
+        env:
+          SVC_USER: smoke
+          SVC_PASS: smoke
+        run: python podcast/preflight.py
       - name: daily (new episodes)
         run: python podcast/ob_update.py
         env:
