@@ -98,9 +98,20 @@ async function main() {
   if (!user || !pass) { console.log('missing credentials'); process.exit(1); return; }
 
   // 1. chart candidates (itunes classic rss — stable, no key)
-  const cands = [];
+  // v2.1（11-25 雋永政策）：總榜＋雋永類分榜——榜單天生偏流行貨幣，
+  // Science/Society&Culture/History/Arts/Education/Religion 才裝得下 On Being 這類機體
+  const GENRE_IDS = D.perennial_chart_ids ||
+    [1325, 1324, 1487, 1301, 1404, 1465];   // Science/Society&Culture/History/Arts/Education/Religion
+  const charts = [];
   for (const mk of D.markets || ['us']) {
-    const j = await fetchJSON(`https://itunes.apple.com/${mk}/rss/toppodcasts/limit=${D.candidates || 40}/json`);
+    charts.push([mk, `https://itunes.apple.com/${mk}/rss/toppodcasts/limit=${D.candidates || 40}/json`]);
+    for (const gid of GENRE_IDS) {
+      charts.push([mk, `https://itunes.apple.com/${mk}/rss/toppodcasts/genre=${gid}/limit=20/json`]);
+    }
+  }
+  const cands = [];
+  for (const [mk, u] of charts) {
+    const j = await fetchJSON(u);
     const items = (j && j.feed && j.feed.entry) || [];
     items.forEach((r, i) => {
       const name = r['im:name'] && r['im:name'].label;
@@ -110,7 +121,7 @@ async function main() {
         itunes_id: (r.id && r.id.attributes && r.id.attributes['im:id']) || '',
         genres: [(r.category && r.category.attributes && r.category.attributes.label) || '',
                  (r['im:genre'] && r['im:genre'].label) || ''].filter(Boolean),
-        score: score(r, i, items.length), market: mk });
+        score: score(r, i, Math.max(items.length, 20)), market: mk });
     });
     await X.sleep(WAF);
   }
