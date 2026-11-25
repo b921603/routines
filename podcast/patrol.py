@@ -173,6 +173,11 @@ def pits_report(rep):
         cnt = sum(v["count"] for k, v in rep["channels"].items()
                   if k.startswith(p["prefix"]))
         pit = {"family": p["family"], "mode": p["mode"], "platform": cnt}
+        if p.get("status") == "paused":
+            pit["mode"] = "paused"
+            pit["pause_note"] = p.get("pause_note", "")
+            out.append(pit)
+            continue
         src = PIT_REPORTS.get(p["family"])
         if src:
             try:

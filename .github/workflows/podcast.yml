@@ -1,9 +1,7 @@
 name: podcast-sync
 
 on:
-  schedule:
-    - cron: "45 14 * * *"   # 21:45 台北 · 日更
-  workflow_dispatch:
+  workflow_dispatch:          # 11-25 用戶裁示：Bulwark 停更——日更 cron 移除（手動可跑）
 
 concurrency:
   group: podcast-sync

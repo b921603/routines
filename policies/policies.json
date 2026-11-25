@@ -143,12 +143,15 @@
     "mode": "backlog",
     "search": "The Bulwark Daily",
     "status_report": "pit-status/1",
-    "note": "11-25 用戶裁示升級全集；feed-window=500（audioboom 截斷）＝可補完性邊界"
+    "note": "11-25 用戶裁示升級全集；feed-window=500（audioboom 截斷）＝可補完性邊界",
+    "status": "paused",
+    "pause_note": "11-25 用戶裁示停更：perennial 3/15 與策展核心（雋永的亮點）衝突；頻道保留現狀"
    }
   ],
   "policy_notes": [
    "11-25 用戶裁示：①所有海選進坑一律全集型（backlog）②開坑許可＝全部維護中坑位補完（true_missing=0，可補完性制約：官方 dead link／音檔遺失不計債）——補完定義隨 pit-status/1",
-   "11-25 v2.1：score 新增 perennial 維度（0-15）；海選源加雋永六分榜；learnScore 拔 news/politics；genre_bonus 拔 News/Comedy"
+   "11-25 v2.1：score 新增 perennial 維度（0-15）；海選源加雋永六分榜；learnScore 拔 news/politics；genre_bonus 拔 News/Comedy",
+   "11-25 用戶裁示：Bulwark 停更（頻道保留）；paused 坑不計入 gate 補完條件"
   ],
   "genre_bonus": [
    "Philosophy",

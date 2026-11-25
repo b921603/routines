@@ -354,6 +354,10 @@ def main():
     pits = latest.get("pits") or []
     steady = []
     for p in pits:
+        if p.get("mode") == "paused":
+            steady.append({"family": p["family"], "steady": True,
+                           "detail": "paused（用戶裁示 11-25）——不計入補完條件"})
+            continue
         if p["mode"] == "backlog":
             if p.get("source") == "engine":
                 # 引擎回報為真相源：status=complete 且跟進延遲 ≤7 天
@@ -372,7 +376,7 @@ def main():
             detail = f"RSS 4天缺 {miss}"
         steady.append({"family": p["family"], "steady": bool(ok and streak >= need_streak),
                        "detail": f"{detail}｜streak {streak}/{need_streak}"})
-    active = len(pits)
+    active = len([p for p in pits if p.get("mode") != "paused"])
     wip = int(pol.get("wip_limit", 4))
     now = time.time()
     appr = [a for a in (gs.get("approvals") or []) if now - a.get("at", 0) < 30 * 86400]
