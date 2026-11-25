@@ -1,149 +1,153 @@
 {
-  "policy_version": 4,
-  "pacing": {
-    "waf_ms": 350,
-    "retry_backoff_max_s": 8,
-    "unit_retry": 3,
-    "rounds": 4,
-    "round_pause_s": 90
-  },
-  "naming": {
-    "region_buckets": [
-      "001-100",
-      "101-200",
-      "201-300"
-    ],
-    "title_template": "{series} #{ep}: {title}"
-  },
-  "privacy": {
-    "hide_state": true,
-    "unlisted": true
-  },
-  "quality": {
-    "lrc_min_pairs": 50,
-    "audio_bitrate_min_kbps": 64
-  },
-  "discovery": {
-    "markets": [
-      "us",
-      "gb"
-    ],
-    "candidates": 40,
-    "min_score": 6,
-    "max_per_week": 2,
-    "genre_bonus": [
-      "Education",
-      "Business",
-      "Technology",
-      "History",
-      "Science",
-      "Society & Culture",
-      "News",
-      "Comedy"
-    ]
-  },
-  "notify": {
-    "include_status_codes": true
-  },
-  "podcast": {
-    "feed": "audioboom:5114286",
-    "bitrate": "32k",
-    "audio_channels": 1,
-    "segment_seconds": 3600,
-    "max_per_run": 2,
-    "days_window": 4,
-    "platform_ai_subtitle": true,
-    "cover": "official-art",
-    "channel_capacity": 100,
-    "owners": {
-      "The Tim Ferriss Show": {
-        "repo": "tff-sync",
-        "writer": "tfs_engine",
-        "patrol": "read-only"
-      },
-      "How To Fail": {
-        "repo": "htf engine",
-        "writer": "htf_engine",
-        "patrol": "read-only"
-      },
-      "The Bulwark Daily": {
-        "repo": "routines",
-        "writer": "podcast/bulwark_update.py",
-        "patrol": "read-only"
-      }
-    }
-  },
-  "patrol": {
-    "mode": "shadow",
-    "write": false,
-    "schedule_taipei": "05:30 daily",
-    "scope": {
-      "ship_prefixes": [
-        "The Tim Ferriss Show #",
-        "How To Fail"
-      ],
-      "groups": [
-        "Tim Ferriss Show",
-        "How To Fail With Elizabeth Day",
-        "The Bulwark Daily"
-      ],
-      "bulwark_l3_days": 4
-    },
-    "drift": [
-      "count_shrink",
-      "group_member_drop",
-      "cover_loss",
-      "desc_banned"
-    ],
-    "whitelist_p41": [
-      "ai_subtitle_requeue",
-      "channel_desc_rewrite",
-      "episode_cover_repost",
-      "group_member_rebind"
-    ],
-    "note": "P4.1 白名單預設關閉；開啟需 PATROL_WRITE=1 且僅限白名單操作"
-  },
-  "pipeline": {
-    "wip_limit": 4,
-    "monthly_pit_budget": 1,
-    "steady_criteria": {
-      "completion_target": 0.95,
-      "audit_green_days": 7,
-      "fresh_sla_missing_max": 0
-    },
-    "gate": {
-      "mode": "llm_auto",
-      "llm": "gemini-2.0-flash",
-      "llm_scope": "僅在政策額度內挑選候選與給理由；額度/上限/政策變更永遠人類",
-      "always_human": [
-        "policy_number_change",
-        "wip_limit_increase",
-        "publisher_class==major"
-      ],
-      "execution": "核准≠自動開坑；執行需人類於對話觸發（開坑 <name>）"
-    },
-    "pits": [
-      {
-        "family": "tff",
-        "prefix": "The Tim Ferriss Show #",
-        "mode": "backlog",
-        "search": "The Tim Ferriss Show",
-        "status_report": "pit-status/1"
-      },
-      {
-        "family": "htf",
-        "prefix": "How To Fail",
-        "mode": "backlog",
-        "search": "How To Fail With Elizabeth Day",
-        "status_report": "pit-status/1"
-      },
-      {
-        "family": "bulwark",
-        "prefix": "The Bulwark Daily",
-        "mode": "rolling",
-        "search": "The Bulwark Daily",
-        "status_report": "pit-status/1"
-      }
-    ]
+ "policy_version": 4,
+ "pacing": {
+  "waf_ms": 350,
+  "retry_backoff_max_s": 8,
+  "unit_retry": 3,
+  "rounds": 4,
+  "round_pause_s": 90
+ },
+ "naming": {
+  "region_buckets": [
+   "001-100",
+   "101-200",
+   "201-300"
+  ],
+  "title_template": "{series} #{ep}: {title}"
+ },
+ "privacy": {
+  "hide_state": true,
+  "unlisted": true
+ },
+ "quality": {
+  "lrc_min_pairs": 50,
+  "audio_bitrate_min_kbps": 64
+ },
+ "discovery": {
+  "markets": [
+   "us",
+   "gb"
+  ],
+  "candidates": 40,
+  "min_score": 6,
+  "max_per_week": 2,
+  "genre_bonus": [
+   "Education",
+   "Business",
+   "Technology",
+   "History",
+   "Science",
+   "Society & Culture",
+   "News",
+   "Comedy"
+  ]
+ },
+ "notify": {
+  "include_status_codes": true
+ },
+ "podcast": {
+  "feed": "audioboom:5114286",
+  "bitrate": "32k",
+  "audio_channels": 1,
+  "segment_seconds": 3600,
+  "max_per_run": 2,
+  "days_window": 4,
+  "platform_ai_subtitle": true,
+  "cover": "official-art",
+  "channel_capacity": 100,
+  "owners": {
+   "The Tim Ferriss Show": {
+    "repo": "tff-sync",
+    "writer": "tfs_engine",
+    "patrol": "read-only"
+   },
+   "How To Fail": {
+    "repo": "htf engine",
+    "writer": "htf_engine",
+    "patrol": "read-only"
+   },
+   "The Bulwark Daily": {
+    "repo": "routines",
+    "writer": "podcast/bulwark_update.py",
+    "patrol": "read-only"
+   }
   }
+ },
+ "patrol": {
+  "mode": "shadow",
+  "write": false,
+  "schedule_taipei": "05:30 daily",
+  "scope": {
+   "ship_prefixes": [
+    "The Tim Ferriss Show #",
+    "How To Fail"
+   ],
+   "groups": [
+    "Tim Ferriss Show",
+    "How To Fail With Elizabeth Day",
+    "The Bulwark Daily"
+   ],
+   "bulwark_l3_days": 4
+  },
+  "drift": [
+   "count_shrink",
+   "group_member_drop",
+   "cover_loss",
+   "desc_banned"
+  ],
+  "whitelist_p41": [
+   "ai_subtitle_requeue",
+   "channel_desc_rewrite",
+   "episode_cover_repost",
+   "group_member_rebind"
+  ],
+  "note": "P4.1 白名單預設關閉；開啟需 PATROL_WRITE=1 且僅限白名單操作"
+ },
+ "pipeline": {
+  "wip_limit": 4,
+  "monthly_pit_budget": 1,
+  "steady_criteria": {
+   "completion_target": 0.95,
+   "audit_green_days": 7,
+   "fresh_sla_missing_max": 0
+  },
+  "gate": {
+   "mode": "llm_auto",
+   "llm": "gemini-2.0-flash",
+   "llm_scope": "僅在政策額度內挑選候選與給理由；額度/上限/政策變更永遠人類",
+   "always_human": [
+    "policy_number_change",
+    "wip_limit_increase",
+    "publisher_class==major"
+   ],
+   "execution": "核准≠自動開坑；執行需人類於對話觸發（開坑 <name>）"
+  },
+  "pits": [
+   {
+    "family": "tff",
+    "prefix": "The Tim Ferriss Show #",
+    "mode": "backlog",
+    "search": "The Tim Ferriss Show",
+    "status_report": "pit-status/1"
+   },
+   {
+    "family": "htf",
+    "prefix": "How To Fail",
+    "mode": "backlog",
+    "search": "How To Fail With Elizabeth Day",
+    "status_report": "pit-status/1"
+   },
+   {
+    "family": "bulwark",
+    "prefix": "The Bulwark Daily",
+    "mode": "backlog",
+    "search": "The Bulwark Daily",
+    "status_report": "pit-status/1",
+    "note": "11-25 用戶裁示升級全集；feed-window=500（audioboom 截斷）＝可補完性邊界"
+   }
+  ],
+  "policy_notes": [
+   "11-25 用戶裁示：①所有海選進坑一律全集型（backlog）②開坑許可＝全部維護中坑位補完（true_missing=0，可補完性制約：官方 dead link／音檔遺失不計債）——補完定義隨 pit-status/1"
+  ]
+ }
 }

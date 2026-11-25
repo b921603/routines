@@ -3,7 +3,8 @@
 """podcast/gate.py — 開坑 gate（P4.3 治理層）。
 
 權責三層：政策數字在代碼（硬約束）→ LLM 在額度內判斷 → 人類保例外權。
-防無限開坑：全部既有坑位 steady（補完率≥目標＋審計連綠）＋ WIP 上限
+防無限開坑（11-25 用戶裁示細則）：全部既有坑位補完（status=complete，
+可補完性制約：dead link／音檔遺失不計債）＋ WIP 上限——補完前不開新坑
 ＋月度開坑預算，三者同時滿足才 OPEN；否則 HOLD（附每個坑位的債務進度）。
 
 零平台寫入：只讀 patrol-state.json／candidates.json／policies.json＋
@@ -252,7 +253,7 @@ def llm_decide(pits, steady, cands, pol, gs=None):
         return None
     prompt = (
         "你是播客搬運管線的開坑審核官。政策數字已由代碼驗證（WIP 上限/月預算/"
-        "既有坑位 steady 全達標）——你只在合格候選中挑選或建議觀望，"
+        "既有坑位補完=complete，可補完性制約）——你只在合格候選中挑選或建議觀望，"
         "無權放寬任何約束（政策否決權屬於代碼與人類）。\n"
         + FLEET_CONTEXT + "\n"
         f"現有坑位：{json.dumps(pits, ensure_ascii=False)}\n"

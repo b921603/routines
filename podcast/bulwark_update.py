@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""podcast/bulwark_update.py — 每日同步 runner 端（P3）。
+"""podcast/bulwark_update.py — Bulwark 同步＋全集 backfill runner 端（v2）。
 
 管線：RSS diff → 下載 → 32k mono 轉碼 → >60min 分段 → 上傳 → 發文
 （官方封面＋描述＋平台 AI 字幕）→ 輕審計 → ntfy。
-冪等：頻道既有標題即帳本，重跑自動跳過已存在段落。
+v2（11-25 用戶裁示：Bulwark 升級全集型）：
+  - guid 帳本 trail/done_bulwark.json（kill-safe：每集成功即寫）
+  - 日更模式（預設）：4 天窗、最新優先、MAX_PER_RUN=2
+  - 全集模式（PODCAST_BACKFILL=1）：最舊優先 drain、PODCAST_BACKFILL_MAX=12/run
+  - heal：頻道已有但帳本缺（種子集）→ 補帳
+  - pit-status/1 回報 trail/bulwark-pit.json（patrol→gate 消費）
+可補完性邊界：audioboom feed 截斷 500 集——全集=feed 視窗全集，窗外不可得。
 憑證：全部走環境變數（GitHub Secrets）——SVC_USER/SVC_PASS/PODCAST_CID/NTFY_URL。
 """
 import os, re, io, json, time, html, subprocess
@@ -18,6 +24,26 @@ SEG = 3600                      # 平台單篇音訊上限（秒）
 MAX_PER_RUN = int(os.environ.get("PODCAST_MAX_PER_RUN", "2"))
 DAYS_WINDOW = 4                 # 只同步 N 天內的新集（補跑安全窗）
 CID = os.environ.get("PODCAST_CID", "")
+BACKFILL = os.environ.get("PODCAST_BACKFILL", "") == "1"
+BACKFILL_MAX = int(os.environ.get("PODCAST_BACKFILL_MAX", "12"))
+_REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TRAIL = os.path.join(_REPO, "trail")
+LEDGER = os.path.join(TRAIL, "done_bulwark.json")
+PIT = os.path.join(TRAIL, "bulwark-pit.json")
+
+
+def rj(p, d=None):
+    try:
+        return json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return d
+
+
+def wj(p, d):
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    tmp = p + ".tmp"
+    json.dump(d, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
+    os.replace(tmp, p)
 NTFY = os.environ.get("NTFY_URL", "")
 AUD = "/tmp/podcast_media"
 SES = requests.Session(); SES.headers.update(UA)
@@ -137,12 +163,15 @@ def rss_items():
         t = re.search(r"<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>", blk, re.S)
         d = re.search(r"<pubDate>([^<]+)</pubDate>", blk)
         enc = re.search(r'<enclosure[^>]*url="([^"]+)"', blk)
+        g = re.search(r"<guid[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</guid>", blk, re.S)
         de = re.search(r"<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</description>", blk, re.S)
-        if not (t and d and enc):
+        if not (t and d):
             continue
         items.append({"title": html.unescape(t.group(1)).strip(),
                       "date": parsedate_to_datetime(d.group(1)),
-                      "url": html.unescape(enc.group(1)),
+                      "url": html.unescape(enc.group(1)) if enc else "",
+                      "guid": html.unescape(g.group(1)).strip() if g
+                              else (html.unescape(enc.group(1)) if enc else ""),
                       "desc": html.unescape(de.group(1)).strip() if de else ""})
     return items
 
@@ -287,29 +316,75 @@ def strip_html(s):
     return re.sub(r"<[^>]+>", " ", s or "").replace("&nbsp;", " ").strip()
 
 
+def emit_pit(ledger, catalog, dead):
+    """pit-status/1：family=bulwark（11-25 起全集型）。補完定義＝可補完性制約
+    （dead link 不計債；feed 視窗外不可得，記 boundary）。"""
+    avail = len(catalog)
+    done_n = sum(1 for e in catalog if e["guid"] in ledger)
+    pubs = [e["date"] for e in catalog]
+    done_pubs = [e["date"] for e in catalog if e["guid"] in ledger]
+    lag = round((max(pubs) - max(done_pubs)).total_seconds() / 86400, 1) \
+        if pubs and done_pubs else None
+    win = (min(pubs).strftime("%F"), max(pubs).strftime("%F")) if pubs else ("?", "?")
+    pit = {"protocol": "pit-status/1", "family": "bulwark",
+           "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+           "mode": "backlog", "source": "engine",
+           "official_total": avail + dead, "official_available": avail,
+           "completed_eps": done_n, "true_missing": avail - done_n,
+           "completion": round(done_n / avail, 3) if avail else None,
+           "status": "complete" if avail - done_n == 0 else "in_progress",
+           "dead_links": dead,
+           "feed_window": {"from": win[0], "to": win[1],
+                           "note": "audioboom feed 截斷 500 集——窗外不可得（可補完性邊界）"},
+           "follow_lag_days": lag,
+           "notes": "completion = ledger guids within feed window / catalog; parts inflate article counts"}
+    wj(PIT, pit)
+    log(f"pit: {done_n}/{avail} completion={pit['completion']} dead={dead}")
+    return pit
+
+
 def main():
     if not CID:
         print("PODCAST_CID missing — skip"); return
     login()
     cover = channel_cover_bytes(CID)
-    items = [e for e in rss_items()
-             if e["url"] and (time.time() - e["date"].timestamp()) < DAYS_WINDOW * 86400]
-    items.sort(key=lambda e: e["date"], reverse=True)
+    items = rss_items()
+    catalog = [e for e in items if e["url"]]
+    dead = len(items) - len(catalog)
+    ledger = rj(LEDGER, {}) or {}
     have = have_titles(CID)
-    todo = []
-    for e in items:
+    # heal：頻道已有（種子/舊份）但帳本缺 → 補帳（前綴比對，與舊冪等機制接軌）
+    healed = 0
+    for e in catalog:
         key = norm(f'{e["date"].strftime("%F")} {e["title"]}')
-        # 已同步的集在頻道裡帶（1/2）等後綴 → 用前綴比對
-        if any(h.startswith(key) for h in have):
-            continue
-        todo.append(e)
-        if len(todo) >= MAX_PER_RUN:
-            break
+        if e["guid"] and e["guid"] not in ledger \
+                and any(h.startswith(key) for h in have):
+            ledger[e["guid"]] = {"title": f'{e["date"].strftime("%F")} {e["title"]}',
+                                 "pub": e["date"].strftime("%F"),
+                                 "at": time.strftime("%F %T"), "how": "heal"}
+            healed += 1
+    if healed:
+        wj(LEDGER, ledger)
+        log(f"heal: +{healed} ledger entries (頻道既有)")
+    emit_pit(ledger, catalog, dead)
+    if BACKFILL:
+        pool = [e for e in catalog if e["guid"] and e["guid"] not in ledger]
+        pool.sort(key=lambda e: e["date"])            # 全集模式：oldest-first drain
+        cap = BACKFILL_MAX
+        log(f"BACKFILL mode: pool {len(pool)} ｜ cap {cap}/run")
+    else:
+        pool = [e for e in catalog if e["guid"] and e["guid"] not in ledger
+                and (time.time() - e["date"].timestamp()) < DAYS_WINDOW * 86400]
+        pool.sort(key=lambda e: e["date"], reverse=True)   # 日更模式：最新優先
+        cap = MAX_PER_RUN
+    todo = pool[:cap]
     log(f"new episodes: {len(todo)}")
     if not todo:
         nb, nc = audit(CID)
+        remain = len([e for e in catalog if e["guid"] not in ledger])
         ntfy("podcast sync: up to date",
-             f"RSS 無新集（{DAYS_WINDOW} 天窗）。\n頻道首頁 {nb} 篇、缺封面 {nc}。", 1)
+             f"{'全集進度：剩 ' + str(remain) + ' 集（backfill 下輪續）' if BACKFILL else 'RSS 無新集（4 天窗）'}。"
+             f"\n頻道首頁 {nb} 篇、缺封面 {nc}。", 1)
         return
     synced, failed = 0, []
     for e in todo:
@@ -350,15 +425,23 @@ def main():
                 time.sleep(3)
             if ok_all:
                 synced += 1
+                if e["guid"]:
+                    ledger[e["guid"]] = {"title": full, "pub": e["date"].strftime("%F"),
+                                         "at": time.strftime("%F %T"),
+                                         "how": "backfill" if BACKFILL else "daily"}
+                    wj(LEDGER, ledger)        # kill-safe：每集成功即落帳
             else:
                 failed.append(full[:50])
         except Exception as ex:
             log(f"  ✗ {str(ex)[:110]}")
             failed.append(full[:50])
+    pit = emit_pit(ledger, catalog, dead)
     nb, nc = audit(CID)
-    body = (f"同步 {synced}/{len(todo)} 集：\n" +
+    body = (f"同步 {synced}/{len(todo)} 集（{'全集 backfill' if BACKFILL else '日更'}）：\n" +
             "\n".join(f"• {e['date'].strftime('%m-%d')} {e['title'][:60]}" for e in todo) +
-            f"\n頻道首頁 {nb} 篇｜缺封面 {nc}")
+            f"\n頻道首頁 {nb} 篇｜缺封面 {nc}"
+            f"\n全集進度 {pit['completed_eps']}/{pit['official_available']}"
+            f"（剩 {pit['true_missing']}）")
     if failed:
         body += "\n失敗（下輪續傳）：" + "、".join(failed)
         ntfy(f"podcast sync: PARTIAL {synced}/{len(todo)}", body, 4)

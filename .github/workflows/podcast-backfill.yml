@@ -1,0 +1,77 @@
+name: podcast-backfill
+
+on:
+  schedule:
+    - cron: "17 2 * * 3,6"   # 週三＋週六 10:17 台北 · 全集 drain（與日更/巡刪錯峰）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: podcast-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pillow
+      - name: import smoke test
+        env:
+          SVC_USER: smoke
+          SVC_PASS: smoke
+        run: |
+          python3 -m pip install pyflakes -q
+          if python3 -m pyflakes podcast/bulwark_update.py | grep -q "undefined name"; then
+            python3 -m pyflakes podcast/bulwark_update.py | grep "undefined name"
+            echo "undefined name(s) found — defused pre-run"
+            exit 1
+          fi
+          echo "pyflakes OK"
+          python3 -c "import podcast.bulwark_update" 2>/dev/null || \
+            python3 -c "
+          import sys; sys.path.insert(0, 'podcast')
+          import bulwark_update
+          print('smoke OK')"
+      - name: backfill (oldest-first drain)
+        run: python podcast/bulwark_update.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          PODCAST_CID: ${{ secrets.PODCAST_CID }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          PODCAST_UPLOAD_TIMEOUT: "3300"
+          PODCAST_BACKFILL: "1"
+          PODCAST_BACKFILL_MAX: "12"
+      - name: commit trail (ledger＋pit)
+        if: always()
+        run: |
+          git config user.name "podcast-bot"
+          git config user.email "b921603@users.noreply.github.com"
+          git add trail/done_bulwark.json trail/bulwark-pit.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "bulwark trail: run ${{ github.run_id }} [skip ci]"
+            git pull --rebase origin main || true
+            git push || (sleep 8 && git pull --rebase origin main && git push) \
+              || echo "trail push deferred (race)"
+          fi
+      - name: notify on failure
+        if: failure()
+        env:
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json, requests, os
+          msg = {"topic": os.environ["NTFY_URL"], "title": "podcast backfill failed",
+                 "priority": 4, "tags": ["rotating_light"],
+                 "message": f"backfill run {os.environ.get('RUN_ID','?')} 失敗——查 log。"}
+          requests.post("https://ntfy.sh/", data=json.dumps(msg), timeout=20)
+          PY
