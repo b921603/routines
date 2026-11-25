@@ -142,7 +142,7 @@ def _llm_model(key, gs):
         ranked = _rank_models(r.json().get("models"))
         log(f"llm discovery: {len(ranked)} candidates: {ranked[:5]}")
         dead = set()
-        for round_ in range(2):
+        for round_ in range(4):   # 4 系（argon/carbon/hydrogen/neon）有免費額度、高峰暫拒——多輪長退避等它恢復
             transient = []
             for cand in ranked[:10]:
                 if cand in dead:
@@ -159,8 +159,8 @@ def _llm_model(key, gs):
                     transient.append((cand, err[:50]))  # 瞬時：過載/超時
             if not transient:
                 break
-            log(f"llm probe round{round_} transient: {transient[:3]} — backoff 15s")
-            time.sleep(15)
+            log(f"llm probe round{round_} transient: {transient[:3]} — backoff 40s")
+            time.sleep(40)
         log("llm probe exhausted (all dead or overloaded)")
     except Exception as ex:
         log(f"llm discovery err: {str(ex)[:90]}")
@@ -219,7 +219,8 @@ def _llm_call(key, model, prompt, probe=False, node="llm", schema=None):
     t0 = time.time()
     ok, res = _llm_call_raw(key, model, prompt, probe, schema)
     _trace_node(node, model, ok, "" if ok else res,
-                int((time.time() - t0) * 1000), len(prompt), res if ok else "")
+                int((time.time() - t0) * 1000), len(prompt), res if ok else "",
+                prompt=prompt, model_version=(_LAST_MV[0] if ok else ""))
     return ok, res
 
 
@@ -256,6 +257,7 @@ def _llm_call_raw(key, model, prompt, probe=False, schema=None):
         if cand.get("finishReason") in ("SAFETY", "RECITATION", "PROHIBITED_CONTENT",
                                         "BLOCKLIST", "SPII") or not parts:
             return False, f"blocked:{cand.get('finishReason')}"
+        _LAST_MV[0] = j.get("modelVersion") or ""
         return True, (parts[0].get("text") or "").strip()
     except Exception as ex:
         return False, f"exc:{str(ex)[:80]}"
@@ -273,10 +275,18 @@ def _strip_fences(t):
 # —— LLM 節點追蹤（11-25 用戶要求：每個 LLM 節點的 output 與生成模型必須可見）——
 TRACE = []
 
-def _trace_node(node, model, ok, err, latency_ms, prompt_chars, output):
+_LAST_MV = [""]   # 最近一次 generateContent 回應的 modelVersion（伺服器端回聲，權威於模型自報）
+
+
+def _trace_node(node, model, ok, err, latency_ms, prompt_chars, output, prompt="", model_version=""):
+    """model＝發出 request 時 URL 內的路徑名（來自 Models API 名冊，非模型自報）；
+    model_version＝伺服器回應 modelVersion 欄（提供方權威回聲）；prompt＝實際發送的提示詞全文。"""
     TRACE.append({"node": node, "model": model, "ok": ok,
                   "err": (err or "")[:80], "latency_ms": latency_ms,
-                  "prompt_chars": prompt_chars, "output": (output or "")[:4000],
+                  "prompt_chars": prompt_chars,
+                  "prompt": (prompt or "")[:3000],
+                  "model_version": (model_version or "")[:60],
+                  "output": (output or "")[:4000],
                   "at": time.strftime("%H:%M:%S")})
 
 
@@ -742,10 +752,17 @@ def main():
             md.append("- OPEN 但無 LLM 決策（key 缺／額度盡／本月已決）——ntfy 已附人類決策包")
         else:
             md.append("- HOLD：未進入決策層（先清坑位債＋patrol 連綠）")
-        md += ["", "## 3.2 LLM 節點明細（每節點 output＋生成模型）",
-               "", "| 節點 | 模型 | 結果 | 延遲 | output（節錄） |", "|---|---|---|---|---|"]
-        md += [f"| {t['node']} | `{t['model']}` | {'✅' if t['ok'] else '❌ ' + t['err'][:24]} | {t['latency_ms']}ms | {(t['output'] or '')[:70].replace('|', '\\|')} |"
+        md += ["", "## 3.2 LLM 節點明細（每節點 output＋請求模型＋伺服器回聲版本）",
+               "", "| 節點 | 請求模型 | server modelVersion | 結果 | 延遲 | output（節錄） |", "|---|---|---|---|---|---|"]
+        md += [f"| {t['node']} | `{t['model']}` | {t.get('model_version') or '—'} | {'✅' if t['ok'] else '❌ ' + t['err'][:24]} | {t['latency_ms']}ms | {(t['output'] or '')[:70].replace('|', '\\|')} |"
                for t in TRACE] or ["（本輪無 LLM 調用）"]
+        md += ["", "## 3.3 本輪提示詞（各節點實際發送的 prompt 節錄；全文在 gate-llm-trace.json）"]
+        _seen = set()
+        for t in TRACE:
+            if t["node"] in _seen or not t.get("prompt"):
+                continue
+            _seen.add(t["node"])
+            md += [f"### {t['node']}（請求模型 `{t['model']}`）", "", "```", t["prompt"][:700], "```", ""]
         md += ["", f"## 4. 近期核准日誌（autonomy={autonomy}；人類否決通道＝對話說「停更 <名>」）"]
         md += [f"- {time.strftime('%F', time.localtime(a['at']))}：{a.get('name')}（perennial {a.get('perennial')}｜v2 {a.get('score')}｜model {a.get('model')}{'｜🤖 auto' if a.get('auto') else ''}）" for a in appr] or ["（本月尚無核准）"]
         open("state/gate-decision.md", "w", encoding="utf-8").write("\n".join(md) + "\n")
