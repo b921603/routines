@@ -214,8 +214,15 @@ def channel_id(force=False):
     # create（IsBannedWords precheck → CreatePrivateChannel；thumb 空可）
     rr = req("POST", f"{BASE}/ting/IsBannedWords",
              data={"name": CH_NAME, "channelId": ""}, timeout=30)
-    if rr.json().get("success") is False:
-        raise RuntimeError(f"channel name rejected: {CH_NAME}")
+    try:
+        _res = rr.json()                     # 平台回裸 bool 或 {success: false} 兩型皆見
+        _banned = (_res is False) or (isinstance(_res, dict) and _res.get("success") is False)
+        if _banned:
+            raise RuntimeError(f"channel name rejected: {CH_NAME}")
+    except RuntimeError:
+        raise
+    except Exception:
+        pass                                 # 解析失敗≠違禁——照常嘗試 create
     r = req("POST", f"{BASE}/ting/CreatePrivateChannel",
             data={"name": CH_NAME, "thumb": "", "channelType": "",
                   "description": CH_DESC}, timeout=45)
