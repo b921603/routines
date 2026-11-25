@@ -39,5 +39,10 @@ jobs:
           git config user.email "b921603@users.noreply.github.com"
           git add state logs
           git diff --cached --quiet || git commit -m "state sync"
-          git pull --rebase origin main || true
-          git push || (Start-Sleep -Seconds 8; git pull --rebase origin main; git push)
+          git pull --rebase origin main
+          git push
+          if ($LASTEXITCODE -ne 0) {
+            Start-Sleep -Seconds 8
+            git pull --rebase origin main
+            git push
+          }
