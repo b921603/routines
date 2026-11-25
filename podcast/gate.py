@@ -46,12 +46,13 @@ def eligible_top(n=5):
         rss = v.get("rss") or {}
         if not (rss.get("eps_week") or 0) > 0:
             continue                              # 停更/死鏈
-        sc = (v.get("score") or {}).get("v2")
-        if isinstance(sc, dict):                 # v2=8 維分項 → 取總分
-            sc = sc.get("total")
+        v2 = (v.get("score") or {}).get("v2")
+        sc = v2.get("total") if isinstance(v2, dict) else v2
         out.append({"itunes_id": int(k), "name": v.get("name"),
                     "artist": v.get("artist"),
                     "score": sc,
+                    "perennial": v2.get("perennial") if isinstance(v2, dict) else None,
+                    "learning": v2.get("learning") if isinstance(v2, dict) else None,
                     "cadence": rss.get("eps_week"),
                     "legal": v.get("publisher_class"),
                     "median_min": rss.get("median_min"),          # 決策證據：單集時長
@@ -364,8 +365,9 @@ def main():
                 lag_ok = (p.get("follow_lag_days") is None
                           or p.get("follow_lag_days") <= 7)
                 ok = (p.get("status") == "complete") and lag_ok
+                _lag = p.get('follow_lag_days')
                 detail = (f"engine completion {p.get('completion')} "
-                          f"（缺 {p.get('true_missing')}｜lag {p.get('follow_lag_days')}d）")
+                          f"（缺 {p.get('true_missing')}｜lag {'—' if _lag is None else f'{_lag}d'}）")
             else:
                 ok = p.get("completion") is not None and \
                     p["completion"] >= float(crit.get("completion_target", 0.95))
@@ -384,12 +386,12 @@ def main():
     open_gate = all(s["steady"] for s in steady) and active < wip and len(appr) < budget
 
     # 狀態遷移才通知（HOLD↔OPEN，避免日日噪音）
+    top = eligible_top()
     if open_gate != gs.get("last_open"):
         if open_gate:
-            cands = eligible_top()
             lines = [f"開坑許可 OPEN（WIP {active}/{wip}｜月預算 {len(appr)}/{budget}）"]
-            lines += [f"• {c['name']}（{c['artist']}）v2={c['score']}｜{c['legal']}｜{c['cadence']}ep/週"
-                      for c in cands[:3]]
+            lines += [f"• {c['name']}（{c['artist']}）v2={c['score']}｜peren {c.get('perennial')}｜{c['legal']}｜{c['cadence']}ep/週"
+                      for c in top[:3]]
         else:
             lines = [f"開坑許可 HOLD（WIP {active}/{wip}｜月預算 {len(appr)}/{budget}）"]
             lines += [f"• {s['family']}: {s['detail']}" for s in steady if not s["steady"]]
@@ -400,17 +402,17 @@ def main():
         ntfy("gate: GEMINI key 失效", "LLM 決策層已自動降級為人類決策包。請重新提供 key（舊 key 已吊銷或無效）。", 4)
         gs["llm_key_dead_notified"] = True
     # gate OPEN 但合格候選為空＝鏈路故障訊號（sweep/schema/覆蓋 probe）——主動告警
-    if open_gate and not eligible_top():
+    if open_gate and not top:
         if not gs.get("empty_eligible_notified"):
             ntfy("gate: OPEN 但零合格候選",
                  "海選→裁決鏈路疑似故障（sweep 停擺/DB schema/覆蓋 probe 全剔）。請查 sweep 與 candidates.json。", 4)
             gs["empty_eligible_notified"] = True
     # LLM 決策（僅 OPEN＋本月未決時；無 key → 決策包留給人類）
     dec = None
-    if open_gate and not gs.get("month_decided") and eligible_top():
-        dec = llm_decide(pits, steady, eligible_top(), pol, gs)
+    if open_gate and not gs.get("month_decided") and top:
+        dec = llm_decide(pits, steady, top, pol, gs)
         if dec and dec["valid"] and dec["recommend"]:
-            c = next((c for c in eligible_top() if c["itunes_id"] == dec["recommend"]), None)
+            c = next((c for c in top if c["itunes_id"] == dec["recommend"]), None)
             gs.setdefault("approvals", []).append(
                 {"at": now, "itunes_id": dec["recommend"], "name": c["name"],
                  "reasons": dec["reasons"], "done_when": dec["done_when"],
@@ -427,11 +429,10 @@ def main():
         elif dec:
             ntfy("gate: LLM 建議觀望", dec["reasons"], 3)
         elif not os.environ.get("GEMINI_API_KEY"):
-            cands = eligible_top()
-            if cands:
+            if top:
                 ntfy("gate: 待人類決策（無 LLM key）",
                      "開坑許可 OPEN。Top 候選：\n" +
-                     "\n".join(f"• {c['name']} v2={c['score']}（{c['legal']}）" for c in cands[:3]) +
+                     "\n".join(f"• {c['name']} v2={c['score']}（{c['legal']}）" for c in top[:3]) +
                      "\n提供 GEMINI_API_KEY 即啟用自動決策", 3)
     gs["last_open"] = open_gate
     gs.setdefault("log", []).append(
@@ -441,6 +442,31 @@ def main():
     gs["log"] = gs["log"][:60]
     os.makedirs(os.path.dirname(GSTATE) or ".", exist_ok=True)
     json.dump(gs, open(GSTATE, "w"), ensure_ascii=False, indent=1)
+    # 人類可讀決策過程（11-25 用戶要求：清楚看到結果怎麼出來）——patrol keep 自動 commit
+    try:
+        md = ["# Gate 決策過程 " + time.strftime("%F %T"), "",
+              f"**裁定：{'✅ OPEN' if open_gate else '⌛ HOLD'}** ｜ 連綠 streak {streak}/{need_streak} ｜ WIP {active}/{wip} ｜ 月預算 {len(appr)}/{budget}",
+              "", "## 1. 坑位債務判定（補完前提）"]
+        for s_ in steady:
+            md.append(f"- **{s_['family']}**: {'✅ steady' if s_['steady'] else '⌛ 未穩'} — {s_['detail']}")
+        md += ["", "## 2. 合格候選（fresh＋非 major＋非 avoid＋活躍）Top5",
+               "", "| 節目 | v2 總分 | perennial | legal | 更新 | 時長中位 |",
+               "|---|---|---|---|---|---|"]
+        md += [f"| {c['name']} | {c['score']} | {c.get('perennial')} | {c['legal']} | {c['cadence']}ep/週 | {c['median_min']}min |" for c in top] or ["（無合格候選）"]
+        md += ["", "## 3. 決策"]
+        if dec:
+            md += [f"- 基座：`{dec.get('model')}` ｜ recommend：**{dec['recommend']}** ｜ valid：{dec['valid']} ｜ confidence：{dec.get('confidence')}",
+                   f"- 理由：{dec.get('reasons')}", f"- 風險：{dec.get('risks')}",
+                   f"- 完成態（done_when）：{dec.get('done_when')}", f"- 證據引用：{dec.get('evidence')}"]
+        elif open_gate:
+            md.append("- OPEN 但無 LLM 決策（key 缺／額度盡／本月已決）——ntfy 已附人類決策包")
+        else:
+            md.append("- HOLD：未進入決策層（先清坑位債＋patrol 連綠）")
+        md += ["", "## 4. 近期核准日誌（核准≠自動開坑——執行需人類於對話觸發）"]
+        md += [f"- {time.strftime('%F', time.localtime(a['at']))}：{a.get('name')}（perennial {a.get('perennial')}｜v2 {a.get('score')}｜model {a.get('model')}）" for a in appr] or ["（本月尚無核准）"]
+        open("state/gate-decision.md", "w", encoding="utf-8").write("\n".join(md) + "\n")
+    except Exception as ex:
+        log(f"gate trace emit err: {str(ex)[:80]}")
     print(json.dumps({"open": open_gate, "streak": streak, "active": active,
                       "wip": wip, "budget_used": len(appr),
                       "steady": steady, "decision": dec}, ensure_ascii=False, indent=1))
