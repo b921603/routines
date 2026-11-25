@@ -297,7 +297,7 @@ def llm_decide(pits, steady, cands, pol, gs=None):
     gs["llm_calls"] = calls
     txt = None
     transient = 0
-    for attempt in range(4):  # 退避重試鏈（含模型滑落）
+    for attempt in range(6):  # 退避重試鏈（含模型滑落；503 過載窗需更長冷卻）
         ok, res = _llm_call(key, model, prompt, node="decision")
         if ok:
             txt = res
@@ -314,7 +314,7 @@ def llm_decide(pits, steady, cands, pol, gs=None):
             return None
         if res.startswith("http429") or res.startswith("http5") or res.startswith("exc:Read"):
             transient += 1                     # 瞬時過載
-            time.sleep(4 * (attempt + 1))
+            time.sleep(8 * (attempt + 1))      # 503 過載窗：加長退避
             if transient >= 2:                 # 連續過載→換模型（可能是 tier 額度）
                 gs.pop("llm_model", None)
                 model = _llm_model(key, gs)
