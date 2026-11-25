@@ -158,6 +158,7 @@ PIT_REPORTS = {   # pit-status/1 協議：引擎回報 → patrol 讀取
     "tff": "https://raw.githubusercontent.com/b921603/tf-engine/main/trail/pit-status.json",
     "htf": "https://raw.githubusercontent.com/b921603/htf-engine/main/trail/pit-status.json",
     "bulwark": "https://raw.githubusercontent.com/b921603/routines/main/trail/bulwark-pit.json",
+    "ob": "https://raw.githubusercontent.com/b921603/routines/main/trail/ob-pit.json",
 }
 
 

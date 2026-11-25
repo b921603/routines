@@ -1,0 +1,77 @@
+name: ob-backfill
+
+on:
+  schedule:
+    - cron: "17 2 * * 2,4,6"   # 週二/四/六 10:17 台北 · On Being 全集 drain（錯峰）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ob-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pillow
+      - name: import smoke test (pyflakes + entrypoints)
+        env:
+          SVC_USER: smoke
+          SVC_PASS: smoke
+        run: |
+          python3 -m pip install pyflakes -q
+          if python3 -m pyflakes podcast/ob_update.py | grep -q "undefined name"; then
+            python3 -m pyflakes podcast/ob_update.py | grep "undefined name"
+            echo "undefined name(s) found — defused pre-run"
+            exit 1
+          fi
+          echo "pyflakes OK"
+          python3 -c "
+          import sys; sys.path.insert(0, 'podcast')
+          import ob_update
+          assert callable(ob_update.main) and callable(ob_update.emit_pit)
+          print('smoke OK')"
+      - name: backfill (oldest-first drain)
+        run: python podcast/ob_update.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
+          OB_CID: ${{ secrets.OB_CID }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          OB_BACKFILL: "1"
+          OB_BACKFILL_MAX: "12"
+      - name: commit trail (channel+ledger+pit)
+        if: always()
+        run: |
+          git config user.name "ob-bot"
+          git config user.email "b921603@users.noreply.github.com"
+          git add trail/ob_channel.json trail/done_ob.json trail/ob-pit.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "ob trail: run ${{ github.run_id }} [skip ci]"
+            git pull --rebase origin main || true
+            git push || (sleep 8 && git pull --rebase origin main && git push) \
+              || echo "trail push deferred (race)"
+          fi
+      - name: notify on failure
+        if: failure()
+        env:
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json, requests, os
+          msg = {"topic": os.environ["NTFY_URL"], "title": "On Being backfill failed",
+                 "priority": 4, "tags": ["rotating_light"],
+                 "message": f"ob-backfill run {os.environ.get('RUN_ID','?')} 失敗——查 log。"}
+          requests.post("https://ntfy.sh/", data=json.dumps(msg), timeout=20)
+          PY
