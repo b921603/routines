@@ -198,14 +198,19 @@ def norm(s):
 
 
 def _banned_check(name):
-    """IsBannedWords：回裸 bool 或 {success:false} 兩型皆見（iter-2/3 實錘）。"""
+    """IsBannedWords 語義（iter-5 實錘）：裸 bool——True=違禁／False=通過；
+    兼容 dict 型 {success:false}=違禁（tfs_engine 老碼路徑）。"""
     rr = req("POST", f"{BASE}/ting/IsBannedWords",
              data={"name": name, "channelId": ""}, timeout=30)
     try:
         res = rr.json()
-        return (res is False) or (isinstance(res, dict) and res.get("success") is False)
+        if isinstance(res, bool):
+            return res                       # False=通過（iter-5 四候選全誤判的根因）
+        if isinstance(res, dict):
+            return res.get("success") is False
     except Exception:
-        return False                         # 解析失敗≠違禁——照常嘗試
+        pass
+    return False                             # 解析失敗≠違禁——照常嘗試
 
 
 def channel_id(force=False):
