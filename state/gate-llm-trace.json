@@ -2,351 +2,61 @@
  {
   "node": "N1_screen",
   "model": "gemini-3.5-flash-lite",
+  "ok": false,
+  "err": "http503",
+  "latency_ms": 1367,
+  "prompt_chars": 1401,
+  "output": "",
+  "at": "14:40:09"
+ },
+ {
+  "node": "N1_screen",
+  "model": "gemini-3.5-flash-lite",
   "ok": true,
   "err": "",
-  "latency_ms": 4774,
+  "latency_ms": 12135,
   "prompt_chars": 1401,
-  "output": "{\"shortlist\": [1484511465, 256580326, 1612090432], \"note\": \"優先選擇高學習價值、長效雋永且更新頻率適中的歷史與人類行為節目，排除時事耗品、語義重疊及日更負擔過高的候選。\"}",
-  "at": "14:32:23"
+  "output": "{\n  \"shortlist\": [1484511465, 256580326, 1612090432],\n  \"note\": \"排除時事與語義重疊，精選高學習價值且符合週更頻率的雋永歷史與人性故事節目。\"\n}",
+  "at": "14:40:41"
  },
  {
   "node": "N2_deep",
   "model": "gemini-3.5-flash-lite",
   "ok": false,
   "err": "http503",
-  "latency_ms": 728,
+  "latency_ms": 1047,
   "prompt_chars": 991,
   "output": "",
-  "at": "14:32:24"
+  "at": "14:40:42"
  },
  {
-  "node": "decision",
+  "node": "N2_deep",
   "model": "gemini-3.5-flash-lite",
   "ok": false,
   "err": "http503",
-  "latency_ms": 1518,
-  "prompt_chars": 3919,
+  "latency_ms": 1976,
+  "prompt_chars": 991,
   "output": "",
-  "at": "14:32:25"
+  "at": "14:41:04"
  },
  {
-  "node": "decision",
+  "node": "N2_deep",
   "model": "gemini-3.5-flash-lite",
   "ok": false,
   "err": "http503",
-  "latency_ms": 1230,
-  "prompt_chars": 3919,
+  "latency_ms": 1053,
+  "prompt_chars": 991,
   "output": "",
-  "at": "14:32:35"
+  "at": "14:41:50"
  },
  {
-  "node": "model_probe",
-  "model": "gemini-4-argon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 171,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:32:51"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-carbon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 147,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:32:51"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-hydrogen",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 520,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:32:52"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-neon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 161,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:32:52"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.8-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 490,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:32:52"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.7-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 521,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:32:53"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.6-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 837,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:32:54"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.5-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 690,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:32:54"
- },
- {
-  "node": "model_probe",
+  "node": "decision",
   "model": "gemini-3.5-flash-lite",
   "ok": true,
   "err": "",
-  "latency_ms": 8832,
-  "prompt_chars": 37,
-  "output": "{\"model\": \"gpt-4o\", \"ok\": true}",
-  "at": "14:33:03"
- },
- {
-  "node": "decision",
-  "model": "gemini-3.5-flash-lite",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 1229,
+  "latency_ms": 1373,
   "prompt_chars": 3919,
-  "output": "",
-  "at": "14:33:04"
- },
- {
-  "node": "decision",
-  "model": "gemini-3.5-flash-lite",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 3795,
-  "prompt_chars": 3919,
-  "output": "",
-  "at": "14:33:32"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-argon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 186,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:34:04"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-carbon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 142,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:34:05"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-hydrogen",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 636,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:34:05"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-neon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 143,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:34:05"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.8-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 428,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:34:06"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.7-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 1294,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:34:07"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.6-flash",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 174,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:34:07"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.5-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 772,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:34:08"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.5-flash-lite",
-  "ok": true,
-  "err": "",
-  "latency_ms": 963,
-  "prompt_chars": 37,
-  "output": "{\n  \"model\": \"gpt-4o\",\n  \"ok\": true\n}",
-  "at": "14:34:09"
- },
- {
-  "node": "decision",
-  "model": "gemini-3.5-flash-lite",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 895,
-  "prompt_chars": 3919,
-  "output": "",
-  "at": "14:34:10"
- },
- {
-  "node": "decision",
-  "model": "gemini-3.5-flash-lite",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 880,
-  "prompt_chars": 3919,
-  "output": "",
-  "at": "14:34:51"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-argon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 170,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:35:39"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-carbon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 134,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:35:39"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-hydrogen",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 510,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:35:40"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-4-neon",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 131,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:35:40"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.8-flash",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 196,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:35:40"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.7-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 493,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:35:41"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.6-flash",
-  "ok": false,
-  "err": "http429",
-  "latency_ms": 129,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:35:41"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.5-flash",
-  "ok": false,
-  "err": "http503",
-  "latency_ms": 802,
-  "prompt_chars": 37,
-  "output": "",
-  "at": "14:35:41"
- },
- {
-  "node": "model_probe",
-  "model": "gemini-3.5-flash-lite",
-  "ok": true,
-  "err": "",
-  "latency_ms": 803,
-  "prompt_chars": 37,
-  "output": "{\n  \"model\": \"gpt-4o\",\n  \"ok\": true\n}",
-  "at": "14:35:42"
+  "output": "{\n  \"recommend\": 1484511465,\n  \"reasons\": \"Cautionary Tales with Tim Harford scores high in perennial value (12/15) and learning value (13/15), aligning well with the core curation principle of timeless insights and storytelling quality for English learners. It operates independently with manageable cadence and substantial episode duration.\",\n  \"risks\": \"Potential overlap with narrative-driven styles, but fits the history/human behavior niche well without duplicating existing active backlog constraints.\",\n  \"done_when\": \"Verify platform resource availability and ensure transcripts or ingestion feasibility for Pushkin Industries feeds.\",\n  \"confidence\": \"high\",\n  \"evidence\": \"itunes_id: 1484511465, name: Cautionary Tales with Tim Harford, perennial: 12, learning: 13, legal: independent, median_min: 38.7\"\n}",
+  "at": "14:41:51"
  }
 ]
