@@ -10,7 +10,7 @@ guid 帳本（kill-safe）→ 下載 → 32k mono → >60min 分段 → 上傳 �
 簡介紀律：無「RSS 同步」類尾綴；官方逐字稿 feed 未提供（transcript_tag=false）不宣稱。
 憑證：PODCAST_COOKIE（免登入）／SVC_USER+SVC_PASS／GH_TOKEN（槽位）／NTFY_URL。
 """
-import os, re, io, json, time, html, subprocess
+import os, re, io, json, time, html, subprocess, sys
 from email.utils import parsedate_to_datetime
 import requests
 
@@ -530,9 +530,12 @@ def main():
             f"（剩 {pit['true_missing']}）")
     if failed:
         body += "\n失敗（下輪續傳）：" + "、".join(failed)
-        ntfy(f"On Being sync: PARTIAL {synced}/{len(todo)}", body, 4)
-    else:
-        ntfy(f"On Being sync: OK {synced} ep", body, 3)
+    if synced == 0 and todo:
+        ntfy(f"On Being sync: TOTAL FAIL 0/{len(todo)}",
+             body + "\n全數失敗——疑似平台端故障（保存異常類）。GA 標記 failure；下輪排程自動續傳。", 4)
+        log("done (exit 1: zero-sync total failure)")
+        sys.exit(1)                       # 全敗＝GA failure——success conclusion 不得掩蓋零產出（11-25 教訓）
+    ntfy(f"On Being sync: {'PARTIAL' if failed else 'OK'} {synced}/{len(todo)}", body, 4 if failed else 3)
     log("done")
 
 
