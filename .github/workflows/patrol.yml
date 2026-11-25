@@ -10,6 +10,10 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: patrol
+  cancel-in-progress: true   # 新巡邏取代舊巡邏（demo dispatch 不與排程並發寫 gate-state）
+
 permissions:
   contents: write
 
