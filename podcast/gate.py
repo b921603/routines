@@ -191,21 +191,43 @@ SCHEMA = {
     "required": ["recommend", "reasons", "risks", "done_when"],
 }
 
+# 裁決網絡各節點的 response schema（API 級強制輸出形狀——11-25 demo 實證：
+# 全局 SCHEMA 會把 N1 shortlist 壓成 decision 形 → 節點永遠解析為空）
+NET_SCHEMAS = {
+    "N1_screen": {"type": "OBJECT", "properties": {
+        "shortlist": {"type": "ARRAY", "items": {"type": "INTEGER"}},
+        "note": {"type": "STRING"}}, "required": ["shortlist"]},
+    "N2_deep": {"type": "OBJECT", "properties": {
+        "ranked": {"type": "ARRAY", "items": {"type": "OBJECT", "properties": {
+            "itunes_id": {"type": "INTEGER"}, "score_100": {"type": "INTEGER"},
+            "learn": {"type": "STRING"}, "perennial_arg": {"type": "STRING"},
+            "risk": {"type": "STRING"}},
+            "required": ["itunes_id", "score_100"]}},
+        "note": {"type": "STRING"}}, "required": ["ranked"]},
+    "N3_redteam": {"type": "OBJECT", "properties": {
+        "veto": {"type": "BOOLEAN"}, "fatal_risks": {"type": "STRING"},
+        "hardening": {"type": "STRING"}}, "required": ["veto"]},
+    "N4_taste": {"type": "OBJECT", "properties": {
+        "final_pick": {"type": "INTEGER"}, "five_year_case": {"type": "STRING"},
+        "taste_note": {"type": "STRING"}}, "required": ["final_pick", "five_year_case"]},
+    "decision": SCHEMA,
+}
 
-def _llm_call(key, model, prompt, probe=False, node="llm"):
+
+def _llm_call(key, model, prompt, probe=False, node="llm", schema=None):
     """帶節點追蹤的單發調用：每次 LLM 調用記 node/model/ok/延遲/原始 output → TRACE。"""
     t0 = time.time()
-    ok, res = _llm_call_raw(key, model, prompt, probe)
+    ok, res = _llm_call_raw(key, model, prompt, probe, schema)
     _trace_node(node, model, ok, "" if ok else res,
                 int((time.time() - t0) * 1000), len(prompt), res if ok else "")
     return ok, res
 
 
-def _llm_call_raw(key, model, prompt, probe=False):
+def _llm_call_raw(key, model, prompt, probe=False, schema=None):
     """單發調用；回 (ok, text|err)。處理：HTTP 錯誤矩陣／安全攔截／非 JSON body。"""
     cfg = {"temperature": 0.4,
            "response_mime_type": "application/json",
-           "response_schema": SCHEMA}
+           "response_schema": schema or SCHEMA}
     if probe:
         cfg = {"temperature": 0.0, "maxOutputTokens": 2000,
                "response_mime_type": "application/json",
@@ -375,7 +397,7 @@ def _net_call(key, model, prompt, node, gs):
         b = {"ym": ym, "n": 0}
     b["n"] += 1
     gs["llm_calls"] = b                       # 網絡呼叫計入月額度（11-25 補漏）
-    ok, txt = _llm_call(key, model, prompt, node=node)
+    ok, txt = _llm_call(key, model, prompt, node=node, schema=NET_SCHEMAS.get(node, SCHEMA))
     if not ok:
         return None
     try:
