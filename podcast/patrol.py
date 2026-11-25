@@ -61,7 +61,7 @@ def fleet_heartbeat():
                 continue
             try:
                 rr = requests.get(
-                    f"{GH}/repos/b921603/{repo}/actions/workflows/{wid}/runs?per_page=1",
+                    f"{GH}/repos/b921603/{repo}/actions/workflows/{wid}/runs?per_page=3",
                     headers=GH_H, timeout=30).json().get("workflow_runs", [])
                 if not rr:
                     parts.append(f"{tag}:—")
@@ -72,8 +72,16 @@ def fleet_heartbeat():
                 if r0["status"] != "completed":
                     parts.append(f"{tag}⏳({h:.0f}h)")
                 elif c not in ("success", "skipped"):
-                    parts.append(f"{tag}✗{str(c)[:5]}({h:.0f}h)")
-                    amber.append(f"艦隊 {repo}/{wf}: conclusion={c}")
+                    done3 = [x.get("conclusion") for x in rr
+                             if x.get("status") == "completed"]
+                    consec = 0
+                    for cc in done3:
+                        if cc in ("success", "skipped"):
+                            break
+                        consec += 1
+                    parts.append(f"{tag}✗{str(c)[:5]}({'x' + str(consec) if consec > 1 else ''}{h:.0f}h)")
+                    amber.append(f"艦隊 {repo}/{wf}: conclusion={c}"
+                                 + (f"（連續 {consec} 次失敗——需人工查看 log）" if consec >= 2 else ""))
                 elif h > thr:
                     parts.append(f"{tag}✗靜默({h:.0f}h)")
                     amber.append(f"艦隊 {repo}/{wf}: 靜默 {h:.0f}h（閾值 {thr}h）")

@@ -53,6 +53,9 @@ def eligible_top(n=5):
                     "score": sc,
                     "cadence": rss.get("eps_week"),
                     "legal": v.get("publisher_class"),
+                    "median_min": rss.get("median_min"),          # 決策證據：單集時長
+                    "transcript_tag": rss.get("transcript_tag"),  # 決策證據：官方逐字稿有無
+                    "chart_rank": (v.get("chart_rank") or {}),    # 決策證據：榜單熱度
                     "desc": (v.get("description") or "")[:300]})
     out.sort(key=lambda x: -(x["score"] or 0))
     return out[:n]
@@ -384,6 +387,12 @@ def main():
     if gs.get("llm_key_dead") and not gs.get("llm_key_dead_notified"):
         ntfy("gate: GEMINI key 失效", "LLM 決策層已自動降級為人類決策包。請重新提供 key（舊 key 已吊銷或無效）。", 4)
         gs["llm_key_dead_notified"] = True
+    # gate OPEN 但合格候選為空＝鏈路故障訊號（sweep/schema/覆蓋 probe）——主動告警
+    if open_gate and not eligible_top():
+        if not gs.get("empty_eligible_notified"):
+            ntfy("gate: OPEN 但零合格候選",
+                 "海選→裁決鏈路疑似故障（sweep 停擺/DB schema/覆蓋 probe 全剔）。請查 sweep 與 candidates.json。", 4)
+            gs["empty_eligible_notified"] = True
     # LLM 決策（僅 OPEN＋本月未決時；無 key → 決策包留給人類）
     dec = None
     if open_gate and not gs.get("month_decided") and eligible_top():
