@@ -391,13 +391,21 @@ def _net_call(key, model, prompt, node, gs):
         log(f"net {node}: budget cap")
         return None
     gs["net_calls"] = (gs.get("net_calls") or 0) + 1
-    ym = time.strftime("%Y-%m")
-    b = gs.get("llm_calls") or {}
-    if b.get("ym") != ym:
-        b = {"ym": ym, "n": 0}
-    b["n"] += 1
-    gs["llm_calls"] = b                       # 網絡呼叫計入月額度（11-25 補漏）
-    ok, txt = _llm_call(key, model, prompt, node=node, schema=NET_SCHEMAS.get(node, SCHEMA))
+    schema = NET_SCHEMAS.get(node, SCHEMA)
+    txt = None
+    ok = False
+    for pause in (0, 20, 45):                  # 節點級瞬時退避（429/503 容量窗；永久錯誤不重試）
+        if pause:
+            time.sleep(pause)
+        ym = time.strftime("%Y-%m")
+        b = gs.get("llm_calls") or {}
+        if b.get("ym") != ym:
+            b = {"ym": ym, "n": 0}
+        b["n"] += 1
+        gs["llm_calls"] = b                   # 每次嘗試都誠實計入月額度（11-25 補漏）
+        ok, txt = _llm_call(key, model, prompt, node=node, schema=schema)
+        if ok or not txt.startswith(("http429", "http503", "http5", "exc:Read")):
+            break
     if not ok:
         return None
     try:
