@@ -1,0 +1,72 @@
+[
+ {
+  "node": "N1_screen",
+  "model": "sim-gemini-3-pro",
+  "ok": true,
+  "err": "",
+  "latency_ms": 0,
+  "prompt_chars": 1401,
+  "output": "{\"shortlist\": [1484511465, 256580326, 1704806594, 1447684472], \"note\": \"[sim] 前4入深評（peren≥10＋fresh independent）\"}",
+  "at": "13:39:55"
+ },
+ {
+  "node": "N2_deep",
+  "model": "sim-gemini-3-pro",
+  "ok": true,
+  "err": "",
+  "latency_ms": 0,
+  "prompt_chars": 1737,
+  "output": "{\"ranked\": [{\"itunes_id\": 1484511465, \"score_100\": 90, \"learn\": \"[sim] Cautionary Tales with \", \"perennial_arg\": \"[sim] peren 12/15，恆久機體\", \"risk\": \"[sim] 低\"}, {\"itunes_id\": 256580326, \"score_100\": 85, \"learn\": \"[sim] HistoryExtra podcast\", \"perennial_arg\": \"[sim] peren 13/15，恆久機體\", \"risk\": \"[sim] 低\"}, {\"itunes_id\": 1704806594, \"score_100\": 80, \"learn\": \"[sim] Rosebud with Gyles Bra\", \"perennial_arg\": \"[sim] peren 10/15，恆久機體\", \"risk\": \"[sim] 低\"}, {\"itunes_id\": 1447684472, \"score_100\": 75, \"learn\": \"[sim] The Bulwark Daily\", \"perennial_arg\": \"[sim] peren 5/15，恆久機體\", \"risk\": \"[sim] 低\"}], \"note\": \"[sim] 學習×雋永排序\"}",
+  "at": "13:39:55"
+ },
+ {
+  "node": "N3_redteam",
+  "model": "sim-gemini-3-pro",
+  "ok": true,
+  "err": "",
+  "latency_ms": 0,
+  "prompt_chars": 1448,
+  "output": "{\"veto\": true, \"fatal_risks\": \"[sim] Pushkin 棄坑風險需複核\", \"hardening\": \"改用 runner-up\"}",
+  "at": "13:39:55"
+ },
+ {
+  "node": "N3_redteam",
+  "model": "sim-gemini-3-pro",
+  "ok": true,
+  "err": "",
+  "latency_ms": 0,
+  "prompt_chars": 1429,
+  "output": "{\"veto\": false, \"fatal_risks\": \"\", \"hardening\": \"無致命風險\"}",
+  "at": "13:39:55"
+ },
+ {
+  "node": "N3_redteam",
+  "model": "sim-gemini-3-pro",
+  "ok": true,
+  "err": "",
+  "latency_ms": 0,
+  "prompt_chars": 1768,
+  "output": "{\"veto\": false, \"fatal_risks\": \"\", \"hardening\": \"無致命風險\"}",
+  "at": "13:39:55"
+ },
+ {
+  "node": "N3_redteam",
+  "model": "sim-gemini-3-pro",
+  "ok": true,
+  "err": "",
+  "latency_ms": 0,
+  "prompt_chars": 1730,
+  "output": "{\"veto\": false, \"fatal_risks\": \"\", \"hardening\": \"無致命風險\"}",
+  "at": "13:39:55"
+ },
+ {
+  "node": "N4_taste",
+  "model": "sim-gemini-3-pro",
+  "ok": true,
+  "err": "",
+  "latency_ms": 0,
+  "prompt_chars": 1030,
+  "output": "{\"final_pick\": 256580326, \"five_year_case\": \"[sim] 五年判詞：主題結構恆久，非時事耗品\", \"taste_note\": \"[sim] 語義零重疊\"}",
+  "at": "13:39:55"
+ }
+]

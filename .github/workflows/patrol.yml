@@ -37,7 +37,7 @@ jobs:
           git config user.name "b921603"
           git config user.email "b921603@users.noreply.github.com"
           # 只提交 patrol 自己的狀態檔——upload_slots.json（槽位統御運行時檔）絕不掃（11-25 衝突污染教訓）
-          git add state/patrol-state.json state/gate-state.json state/gate-decision.md
+          git add state/patrol-state.json state/gate-state.json state/gate-decision.md state/gate-llm-trace.json state/pit-work-order.json
           git diff --cached --quiet || git commit -m "patrol state"
           if (git pull --rebase origin main) { git push origin main } else {
             git rebase --abort 2>$null

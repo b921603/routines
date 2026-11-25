@@ -113,7 +113,7 @@ def _probe_ok(key, model):
     """實彈探測：極小 schema 調用，驗證真的能出結構化 JSON（不聽名字聽行為）。
     回 (ok, err)：err 前綴 http400/404/blocked＝永久性（跳過）；429/5xx＝瞬時（可再試）。"""
     ok, res = _llm_call(key, model,
-                        "回覆 JSON：{\"ok\": true, \"model\": \"你的型號\"}", probe=True)
+                        "回覆 JSON：{\"ok\": true, \"model\": \"你的型號\"}", probe=True, node="model_probe")
     if ok:
         try:
             return json.loads(res).get("ok") is True, ""
@@ -192,7 +192,16 @@ SCHEMA = {
 }
 
 
-def _llm_call(key, model, prompt, probe=False):
+def _llm_call(key, model, prompt, probe=False, node="llm"):
+    """帶節點追蹤的單發調用：每次 LLM 調用記 node/model/ok/延遲/原始 output → TRACE。"""
+    t0 = time.time()
+    ok, res = _llm_call_raw(key, model, prompt, probe)
+    _trace_node(node, model, ok, "" if ok else res,
+                int((time.time() - t0) * 1000), len(prompt), res if ok else "")
+    return ok, res
+
+
+def _llm_call_raw(key, model, prompt, probe=False):
     """單發調用；回 (ok, text|err)。處理：HTTP 錯誤矩陣／安全攔截／非 JSON body。"""
     cfg = {"temperature": 0.4,
            "response_mime_type": "application/json",
@@ -239,6 +248,16 @@ def _strip_fences(t):
     return t
 
 
+# —— LLM 節點追蹤（11-25 用戶要求：每個 LLM 節點的 output 與生成模型必須可見）——
+TRACE = []
+
+def _trace_node(node, model, ok, err, latency_ms, prompt_chars, output):
+    TRACE.append({"node": node, "model": model, "ok": ok,
+                  "err": (err or "")[:80], "latency_ms": latency_ms,
+                  "prompt_chars": prompt_chars, "output": (output or "")[:4000],
+                  "at": time.strftime("%H:%M:%S")})
+
+
 def llm_decide(pits, steady, cands, pol, gs=None):
     """Gemini 在政策額度內挑選。圍欄：schema 強制結構＋硬校驗＋一次修復重試＋
     失敗矩陣（429/5xx 退避→人類包；404 模型下架→重發現；任何失敗只降級不阻塞）。"""
@@ -279,7 +298,7 @@ def llm_decide(pits, steady, cands, pol, gs=None):
     txt = None
     transient = 0
     for attempt in range(4):  # 退避重試鏈（含模型滑落）
-        ok, res = _llm_call(key, model, prompt)
+        ok, res = _llm_call(key, model, prompt, node="decision")
         if ok:
             txt = res
             break
@@ -316,7 +335,7 @@ def llm_decide(pits, steady, cands, pol, gs=None):
             if round_ == 0:                    # 一次修復重試（帶錯誤回饋）
                 ok, res = _llm_call(key, model, prompt + (
                     f"\n你的上一個輸出不是合法 JSON（錯誤：{txt[:60]}）。"
-                    "重新輸出，僅 JSON，無其他文字。"))
+                    "重新輸出，僅 JSON，無其他文字。"), node="decision_repair")
                 if not ok:
                     return None
                 txt = res
@@ -338,8 +357,210 @@ def llm_decide(pits, steady, cands, pol, gs=None):
             "valid": valid, "model": model}
 
 
+# —— 裁決網絡 v1（11-25 用戶授權：完全由 gate 裁斷；品味被授權可高於人類）——
+# N1 初篩 → N2 深評 → N3 紅隊 → N4 審美；每節點 output＋生成模型全落 TRACE。
+# 降級梯：任一節點失敗 → 單節點 llm_decide → 仍失敗 → 人類決策包。
+NET_BUDGET_PER_RUN = 40          # 單次 gate 運行的網絡調用上限（防網絡失控）
+
+
+def _net_call(key, model, prompt, node, gs):
+    """網絡節點共用調用：預算護欄＋JSON 解析。回 dict 或 None（None=節點失敗）。"""
+    if (gs.get("net_calls") or 0) >= NET_BUDGET_PER_RUN:
+        log(f"net {node}: budget cap")
+        return None
+    gs["net_calls"] = (gs.get("net_calls") or 0) + 1
+    ok, txt = _llm_call(key, model, prompt, node=node)
+    if not ok:
+        return None
+    try:
+        d = json.loads(_strip_fences(txt))
+    except Exception:
+        return None
+    return d if isinstance(d, dict) else None
+
+
+def node_screen(key, model, cands, gs):
+    """N1 初篩（輕量）：候選 → 值得深評的 shortlist。id 硬校驗（必在清單內）。"""
+    rows = [{"id": c["itunes_id"], "name": c["name"], "v2": c["score"],
+             "perennial": c.get("perennial"), "learning": c.get("learning"),
+             "legal": c["legal"], "ep_wk": c["cadence"],
+             "min": c["median_min"], "desc": (c.get("desc") or "")[:120]}
+            for c in cands]
+    prompt = ("你是播客開坑管線的初篩節點。策展核心＝雋永的亮點（5 年後還值得聽）。\n"
+              "任務：挑出值得深評的 4-6 個（排除：時事耗品、與既有坑位語義重疊、純娛樂無學習價值）。\n"
+              + FLEET_CONTEXT +
+              "\n候選：" + json.dumps(rows, ensure_ascii=False) +
+              '\n僅輸出 JSON：{"shortlist": [id...], "note": "一句話篩選邏輯"}')
+    d = _net_call(key, model, prompt, "N1_screen", gs)
+    if not d:
+        return None
+    ids = [int(i) for i in (d.get("shortlist") or []) if str(i).isdigit()]
+    ids = [i for i in ids if any(c["itunes_id"] == i for c in cands)]     # 硬校驗
+    return {"ids": ids, "note": (d.get("note") or "")[:200]}
+
+
+def node_deep(key, model, short, gs):
+    """N2 深評：三項論證（學習/雋永/風險）＋排序。id 硬校驗。"""
+    rows = [{"id": c["itunes_id"], "name": c["name"], "v2": c["score"],
+             "perennial": c.get("perennial"), "learning": c.get("learning"),
+             "legal": c["legal"], "ep_wk": c["cadence"], "min": c["median_min"],
+             "transcript": c["transcript_tag"], "desc": (c.get("desc") or "")[:300]}
+            for c in short]
+    prompt = ("你是開坑管線的深評節點。對每個候選論證：學習價值（英語學習者獲得什麼）、"
+              "雋永論證（5 年後為何還值得聽——必須引用 perennial 分與節目型態）、風險。按價值排序。\n"
+              + FLEET_CONTEXT +
+              "\n候選：" + json.dumps(rows, ensure_ascii=False) +
+              '\n僅輸出 JSON：{"ranked": [{"itunes_id": <id>, "score_100": <0-100>, '
+              '"learn": "...", "perennial_arg": "...", "risk": "..."}], "note": "..."}')
+    d = _net_call(key, model, prompt, "N2_deep", gs)
+    if not d:
+        return None
+    ids = {c["itunes_id"] for c in short}
+    ranked = []
+    for r in (d.get("ranked") or []):
+        try:
+            if int(r.get("itunes_id")) in ids:
+                ranked.append({"itunes_id": int(r["itunes_id"]),
+                               "score_100": int(r.get("score_100") or 0),
+                               "learn": (r.get("learn") or "")[:300],
+                               "perennial_arg": (r.get("perennial_arg") or "")[:300],
+                               "risk": (r.get("risk") or "")[:200]})
+        except Exception:
+            continue
+    ranked.sort(key=lambda x: -x["score_100"])
+    return {"ranked": ranked, "note": (d.get("note") or "")[:200]}
+
+
+def node_redteam(key, model, pick, pits, steady, gs):
+    """N3 紅隊：對抗審查——找致命風險；veto=True 否決該候選。節點失敗默認放行待人類複核。"""
+    prompt = ("你是紅隊審查節點。攻擊以下開坑推薦：找致命風險（版權/頻道資源上限/帶寬/"
+              "語義重疊/主講人依賴/棄坑跡象）。存在不可緩解的致命風險才 veto；否則給強化建議。\n"
+              + FLEET_CONTEXT +
+              f"\n現有坑位：{json.dumps(pits, ensure_ascii=False)}"
+              f"\n穩定性：{json.dumps(steady, ensure_ascii=False)}"
+              "\n推薦：" + json.dumps(pick, ensure_ascii=False) +
+              '\n僅輸出 JSON：{"veto": <true|false>, "fatal_risks": "...", "hardening": "..."}')
+    d = _net_call(key, model, prompt, "N3_redteam", gs)
+    if not d:
+        return {"veto": False, "fatal_risks": "(紅隊節點失敗——放行待人類複核)", "hardening": ""}
+    return {"veto": bool(d.get("veto")),
+            "fatal_risks": (d.get("fatal_risks") or "")[:300],
+            "hardening": (d.get("hardening") or "")[:300]}
+
+
+def node_taste(key, model, survivors, deep_by_id, gs):
+    """N4 審美終審：5 年判詞；品味被授權可高於人類直覺。id 硬校驗。"""
+    rows = [{"id": c["itunes_id"], "name": c["name"], "perennial": c.get("perennial"),
+             "deep": deep_by_id.get(c["itunes_id"], {})} for c in survivors]
+    prompt = ("你是策展人終審節點，品味標準＝雋永的亮點（Tools of Titans 初心）。"
+              "選出最終推薦並寫 5 年判詞：為什麼它值得長期佔用一個坑位。"
+              "容許選出與人類直覺不同但更雋永的選擇（你的品味被授權可高於人類）。\n"
+              + FLEET_CONTEXT +
+              "\n倖存候選：" + json.dumps(rows, ensure_ascii=False) +
+              '\n僅輸出 JSON：{"final_pick": <id>, "five_year_case": "...", "taste_note": "..."}')
+    d = _net_call(key, model, prompt, "N4_taste", gs)
+    if not d:
+        return None
+    try:
+        fid = int(d.get("final_pick"))
+    except Exception:
+        return None
+    if fid not in {c["itunes_id"] for c in survivors}:
+        return None                                                    # 硬校驗
+    return {"final_pick": fid,
+            "five_year_case": (d.get("five_year_case") or "")[:400],
+            "taste_note": (d.get("taste_note") or "")[:200]}
+
+
+def _fallback_decide(pits, steady, cands, pol, gs, why):
+    dec = llm_decide(pits, steady, cands, pol, gs)
+    if dec:
+        dec["evidence"] = f"[降級 {why}] " + (dec.get("evidence") or "")
+    return dec
+
+
+def net_decide(pits, steady, cands, pol, gs=None):
+    """裁決網絡 v1 編排：N1→N2→N3→N4。任一環節失敗→降級單節點→再失敗→人類包。"""
+    key = os.environ.get("GEMINI_API_KEY", "")
+    if not key or not cands:
+        return None
+    gs = gs if gs is not None else {}
+    ok_b, calls = _llm_budget_ok(gs)
+    if not ok_b:
+        return None
+    model = os.environ.get("GEMINI_MODEL") or _llm_model(key, gs)
+    if not model:
+        return None
+    gs["net_calls"] = 0
+    s1 = node_screen(key, model, cands, gs)
+    if not s1 or not s1["ids"]:
+        log("net: N1 empty → single-node fallback")
+        return _fallback_decide(pits, steady, cands, pol, gs, "N1_empty")
+    short = [c for c in cands if c["itunes_id"] in s1["ids"]][:6]
+    r2 = node_deep(key, model, short, gs)
+    ranked = (r2 or {}).get("ranked") or []
+    if not ranked:
+        log("net: N2 empty → single-node fallback")
+        return _fallback_decide(pits, steady, cands, pol, gs, "N2_empty")
+    deep_by_id = {r["itunes_id"]: r for r in ranked}
+    order = [next(c for c in short if c["itunes_id"] == r["itunes_id"]) for r in ranked]
+    survivors, rt_log = list(order), []
+    for pick in list(order):
+        rt = node_redteam(key, model, pick, pits, steady, gs)
+        rt_log.append({"pick": pick["itunes_id"], **rt})
+        if rt["veto"]:
+            survivors.remove(pick)
+        if len(survivors) <= 1:
+            break
+    if not survivors:
+        log("net: 紅隊全否決 → 觀望")
+        return {"recommend": 0, "confidence": "high", "model": model,
+                "reasons": "紅隊否決全部深評推薦（詳見 gate-llm-trace.json）",
+                "risks": "; ".join(r["fatal_risks"] for r in rt_log if r.get("fatal_risks"))[:300],
+                "done_when": "出現更強候選或紅隊風險緩解後重審", "evidence": "N1→N2→N3 全鏈",
+                "valid": True, "net": {"N1": s1["note"], "N2": r2["note"], "redteam": rt_log}}
+    t4 = node_taste(key, model, survivors, deep_by_id, gs)
+    if not t4:
+        log("net: N4 fallback → deep order top")
+        final = survivors[0]
+        five_year = deep_by_id.get(final["itunes_id"], {}).get("perennial_arg", "")
+        taste_note = "(N4 失敗—沿用 N2 排序)"
+    else:
+        final = next(c for c in survivors if c["itunes_id"] == t4["final_pick"])
+        five_year = t4["five_year_case"]
+        taste_note = t4["taste_note"]
+    d2 = deep_by_id.get(final["itunes_id"], {})
+    return {"recommend": final["itunes_id"], "confidence": "high", "model": model,
+            "reasons": (f"[網絡] {final['name']}：{d2.get('learn','')}｜五判詞：{five_year}")[:400],
+            "risks": (d2.get("risk", "") + "｜紅隊：" +
+                      next((r["hardening"] for r in rt_log if r["pick"] == final["itunes_id"]), ""))[:300],
+            "done_when": "full 模式自動出 work order；propose 模式待人類點頭",
+            "evidence": f"N1={s1['note']}｜N2 score={d2.get('score_100')}｜perennial={final.get('perennial')}",
+            "valid": True,
+            "net": {"N1": s1["note"], "N2": r2["note"], "redteam": rt_log, "taste": taste_note}}
+
+
+def _emit_work_order(gs, dec, c):
+    """autonomy=full：核准 → work order（自動 onboarding 引擎的合約檔）。"""
+    try:
+        db = json.load(open(CAND))
+        it = (db.get("items") or {}).get(str(dec["recommend"])) or {}
+        wo = {"v": 1, "at": time.time(), "itunes_id": dec["recommend"],
+              "name": c["name"], "channel_name": c["name"],
+              "feed_url": it.get("feed_url") or "", "genre": it.get("genre"),
+              "median_min": c["median_min"], "eps_week": c["cadence"],
+              "approved_by": "gate-net-v1", "nodes": dec.get("net"),
+              "human_veto": "對話說「停更/撤銷 <名>」即停（Bulwark 先例）"}
+        json.dump(wo, open("state/pit-work-order.json", "w"), ensure_ascii=False, indent=1)
+        return True
+    except Exception as ex:
+        log(f"work order err: {str(ex)[:80]}")
+        return False
+
+
 def main():
     pol = json.load(open(POL)).get("pipeline", {})
+    autonomy = (pol.get("gate_autonomy") or "propose")
     ps = json.load(open(PSTATE)) if os.path.exists(PSTATE) else {"runs": []}
     gs = json.load(open(GSTATE)) if os.path.exists(GSTATE) else {}
     runs = ps.get("runs") or []
@@ -410,7 +631,7 @@ def main():
     # LLM 決策（僅 OPEN＋本月未決時；無 key → 決策包留給人類）
     dec = None
     if open_gate and not gs.get("month_decided") and top:
-        dec = llm_decide(pits, steady, top, pol, gs)
+        dec = net_decide(pits, steady, top, pol, gs)
         if dec and dec["valid"] and dec["recommend"]:
             c = next((c for c in top if c["itunes_id"] == dec["recommend"]), None)
             gs.setdefault("approvals", []).append(
@@ -418,12 +639,18 @@ def main():
                  "reasons": dec["reasons"], "done_when": dec["done_when"],
                  "model": dec.get("model"),            # 決策日誌：基座型號（回看迴路用）
                  "perennial": c.get("perennial"),      # 決策當下的雋永分（對照 90 天後實績）
-                 "score": c.get("score")})
+                 "score": c.get("score"), "auto": autonomy == "full"})
             gs["month_decided"] = True
-            ntfy(f"gate: 核准開坑 {c['name']}",
-                 f"LLM（{dec['model']}）決策：\n理由：{dec['reasons']}\n風險：{dec['risks']}\n"
-                 f"完成態：{dec['done_when']}\n執行：回對話說「開坑 {c['name']}」"
-                 f"（核准≠自動開坑）", 3)
+            if autonomy == "full" and _emit_work_order(gs, dec, c):
+                ntfy(f"gate: 全權核准開坑 {c['name']}",
+                     f"裁決網絡（{dec.get('model')}）：\n{dec['reasons']}\n風險：{dec['risks']}\n"
+                     f"work order 已出 → onboarding 引擎自動開坑並長期維護。"
+                     f"\n人類否決通道：對話說「停更 {c['name']}」。", 3)
+            else:
+                ntfy(f"gate: 核准開坑 {c['name']}",
+                     f"LLM（{dec['model']}）決策：\n理由：{dec['reasons']}\n風險：{dec['risks']}\n"
+                     f"完成態：{dec['done_when']}\n執行：回對話說「開坑 {c['name']}」"
+                     f"（核准≠自動開坑）", 3)
         elif dec and not dec["valid"]:
             ntfy("gate: LLM 建議未通過硬校驗", f"recommend={dec['recommend']} 不在合格清單——已否決，待人類決策", 4)
         elif dec:
@@ -442,6 +669,10 @@ def main():
     gs["log"] = gs["log"][:60]
     os.makedirs(os.path.dirname(GSTATE) or ".", exist_ok=True)
     json.dump(gs, open(GSTATE, "w"), ensure_ascii=False, indent=1)
+    try:
+        json.dump(TRACE, open("state/gate-llm-trace.json", "w"), ensure_ascii=False, indent=1)
+    except Exception as ex:
+        log(f"trace dump err: {str(ex)[:60]}")
     # 人類可讀決策過程（11-25 用戶要求：清楚看到結果怎麼出來）——patrol keep 自動 commit
     try:
         md = ["# Gate 決策過程 " + time.strftime("%F %T"), "",
@@ -455,15 +686,25 @@ def main():
         md += [f"| {c['name']} | {c['score']} | {c.get('perennial')} | {c['legal']} | {c['cadence']}ep/週 | {c['median_min']}min |" for c in top] or ["（無合格候選）"]
         md += ["", "## 3. 決策"]
         if dec:
-            md += [f"- 基座：`{dec.get('model')}` ｜ recommend：**{dec['recommend']}** ｜ valid：{dec['valid']} ｜ confidence：{dec.get('confidence')}",
+            md += [f"- 基座：`{dec.get('model')}` ｜ recommend：**{dec['recommend']}** ｜ valid：{dec['valid']} ｜ confidence：{dec.get('confidence')} ｜ autonomy：**{autonomy}**",
                    f"- 理由：{dec.get('reasons')}", f"- 風險：{dec.get('risks')}",
                    f"- 完成態（done_when）：{dec.get('done_when')}", f"- 證據引用：{dec.get('evidence')}"]
+            net = dec.get("net") or {}
+            if net:
+                md += [f"- **N1 初篩**：{net.get('N1')}",
+                       f"- **N2 深評**：{net.get('N2')}",
+                       f"- **N3 紅隊**：{json.dumps(net.get('redteam'), ensure_ascii=False)[:300]}",
+                       f"- **N4 審美**：{net.get('taste')}"]
         elif open_gate:
             md.append("- OPEN 但無 LLM 決策（key 缺／額度盡／本月已決）——ntfy 已附人類決策包")
         else:
             md.append("- HOLD：未進入決策層（先清坑位債＋patrol 連綠）")
-        md += ["", "## 4. 近期核准日誌（核准≠自動開坑——執行需人類於對話觸發）"]
-        md += [f"- {time.strftime('%F', time.localtime(a['at']))}：{a.get('name')}（perennial {a.get('perennial')}｜v2 {a.get('score')}｜model {a.get('model')}）" for a in appr] or ["（本月尚無核准）"]
+        md += ["", "## 3.2 LLM 節點明細（每節點 output＋生成模型）",
+               "", "| 節點 | 模型 | 結果 | 延遲 | output（節錄） |", "|---|---|---|---|---|"]
+        md += [f"| {t['node']} | `{t['model']}` | {'✅' if t['ok'] else '❌ ' + t['err'][:24]} | {t['latency_ms']}ms | {(t['output'] or '')[:70].replace('|', '\\|')} |"
+               for t in TRACE] or ["（本輪無 LLM 調用）"]
+        md += ["", f"## 4. 近期核准日誌（autonomy={autonomy}；人類否決通道＝對話說「停更 <名>」）"]
+        md += [f"- {time.strftime('%F', time.localtime(a['at']))}：{a.get('name')}（perennial {a.get('perennial')}｜v2 {a.get('score')}｜model {a.get('model')}{'｜🤖 auto' if a.get('auto') else ''}）" for a in appr] or ["（本月尚無核准）"]
         open("state/gate-decision.md", "w", encoding="utf-8").write("\n".join(md) + "\n")
     except Exception as ex:
         log(f"gate trace emit err: {str(ex)[:80]}")
