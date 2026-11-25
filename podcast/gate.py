@@ -413,7 +413,10 @@ def main():
             c = next((c for c in eligible_top() if c["itunes_id"] == dec["recommend"]), None)
             gs.setdefault("approvals", []).append(
                 {"at": now, "itunes_id": dec["recommend"], "name": c["name"],
-                 "reasons": dec["reasons"], "done_when": dec["done_when"]})
+                 "reasons": dec["reasons"], "done_when": dec["done_when"],
+                 "model": dec.get("model"),            # 決策日誌：基座型號（回看迴路用）
+                 "perennial": c.get("perennial"),      # 決策當下的雋永分（對照 90 天後實績）
+                 "score": c.get("score")})
             gs["month_decided"] = True
             ntfy(f"gate: 核准開坑 {c['name']}",
                  f"LLM（{dec['model']}）決策：\n理由：{dec['reasons']}\n風險：{dec['risks']}\n"
