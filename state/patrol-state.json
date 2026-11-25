@@ -1,6 +1,146 @@
 {
  "runs": [
   {
+   "at": "2026-11-25 04:23:16",
+   "verdict": "AMBER",
+   "channels": {
+    "How To Fail - Specials": {
+     "count": 59,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "How To Fail With Elizabeth Day": {
+     "count": 320,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Bulwark Daily #001-100": {
+     "count": 10,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #001-100": {
+     "count": 172,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #101-200": {
+     "count": 196,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #201-300": {
+     "count": 201,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #301-400": {
+     "count": 224,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #401-500": {
+     "count": 213,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #501-600": {
+     "count": 226,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #601-700": {
+     "count": 242,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #701-800": {
+     "count": 252,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    },
+    "The Tim Ferriss Show #801-900": {
+     "count": 199,
+     "cover_ok": true,
+     "desc_ok": true,
+     "ep_nocover": []
+    }
+   },
+   "groups": {
+    "Tim Ferriss Show": {
+     "members": 9,
+     "desc_ok": true,
+     "cover_ok": true
+    },
+    "How To Fail With Elizabeth Day": {
+     "members": 2,
+     "desc_ok": true,
+     "cover_ok": true
+    },
+    "The Bulwark Daily": {
+     "members": 1,
+     "desc_ok": true,
+     "cover_ok": true
+    }
+   },
+   "drifts": [
+    "The Tim Ferriss Show #101-200: 篇數 198→196（回落）",
+    "The Tim Ferriss Show #301-400: 篇數 226→224（回落）"
+   ],
+   "fleet": "tf sync✓(1h) rotate✗cance(5h) keepalive✓(6h)｜htf sync✓(0h) rotate✓(1h) keepalive✓(6h)｜routines housekeeping✓(1h) sweep✓(56h) sync✓(5h) patrol⏳(0h)",
+   "pits": [
+    {
+     "family": "tff",
+     "mode": "backlog",
+     "platform": 1925,
+     "source": "engine",
+     "completion": 1.001,
+     "status": "complete",
+     "official_total": 893,
+     "official_available": 892,
+     "completed_eps": 893,
+     "true_missing": 0,
+     "reported_at": "2026-11-25T04:05:30Z",
+     "follow_lag_days": null
+    },
+    {
+     "family": "htf",
+     "mode": "backlog",
+     "platform": 379,
+     "source": "engine",
+     "completion": 1.0,
+     "status": "complete",
+     "official_total": 413,
+     "official_available": 413,
+     "completed_eps": 413,
+     "true_missing": 0,
+     "reported_at": "2026-11-25T04:01:05Z",
+     "follow_lag_days": -0.7
+    },
+    {
+     "family": "bulwark",
+     "mode": "rolling",
+     "platform": 10,
+     "source": "rolling-local"
+    }
+   ],
+   "slots": {
+    "live": null,
+    "err": "read fail"
+   }
+  },
+  {
    "at": "2026-11-24 05:24:07",
    "verdict": "AMBER",
    "channels": {
