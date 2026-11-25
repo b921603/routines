@@ -1,4 +1,4 @@
-# Gate 決策過程 2026-11-25 14:26:47
+# Gate 決策過程 2026-11-25 14:35:42
 
 **裁定：⌛ HOLD** ｜ 連綠 streak 0/7 ｜ WIP 3/4 ｜ 月預算 0/1
 
@@ -19,41 +19,53 @@
 | Betwixt The Sheets: The History of Sex, Scandal & Society | 80.6 | 13 | independent | 2ep/週 | 44.9min |
 
 ## 3. 決策
-- 基座：`gemini-3.5-flash-lite` ｜ recommend：**1484511465** ｜ valid：True ｜ confidence：high ｜ autonomy：**full**
-- ⚠ **DEMO 運行**：非裁決（HOLD／已決狀態下的網絡示範；無核准副作用，LLM 額度照計）
-- 理由：Cautionary Tales with Tim Harford 符合雋永亮點原則，其 perennial 分數為 12（≥10 的硬證據），learning 分數 13，探討人類行為、決策與失敗歷史，完美契合心智與失敗修復類主題，且每週更新 cadence (1.1) 符合帶寬現實與 independent 法律風險要求。
-- 風險：該節目每集平均時長約 38.7 分鐘，需注意上傳頻寬及逐字稿對齊與資源消耗。
-- 完成態（done_when）：確認歐路免費帳號空間與上傳頻寬足夠承載每週約 38.7 分鐘的長錄製節目，並完成自動化管線對接。
-- 證據引用：[降級 N1_empty] itunes_id: 1484511465, perennial: 12, learning: 13, cadence: 1.1, legal: independent, median_min: 38.7, transcript_tag: true
+- HOLD：未進入決策層（先清坑位債＋patrol 連綠）
 
 ## 3.2 LLM 節點明細（每節點 output＋生成模型）
 
 | 節點 | 模型 | 結果 | 延遲 | output（節錄） |
 |---|---|---|---|---|
-| model_probe | `gemini-4-argon` | ❌ http429 | 143ms |  |
-| model_probe | `gemini-4-carbon` | ❌ http429 | 135ms |  |
-| model_probe | `gemini-4-hydrogen` | ❌ http503 | 923ms |  |
-| model_probe | `gemini-4-neon` | ❌ http429 | 113ms |  |
-| model_probe | `gemini-3.8-flash` | ❌ http503 | 442ms |  |
-| model_probe | `gemini-3.7-flash` | ❌ http503 | 415ms |  |
-| model_probe | `gemini-3.6-flash` | ❌ http503 | 288ms |  |
-| model_probe | `gemini-3.5-flash` | ❌ http503 | 511ms |  |
-| model_probe | `gemini-3.5-flash-lite` | ✅ | 6101ms | {"model": "gpt-4o", "ok": true} |
-| N1_screen | `gemini-3.5-flash-lite` | ✅ | 1040ms | {"recommend": 1, "reasons": "Filtered out redundant or high-frequency  |
-| decision | `gemini-3.5-flash-lite` | ❌ http503 | 18307ms |  |
-| decision | `gemini-3.5-flash-lite` | ❌ http503 | 5040ms |  |
-| model_probe | `gemini-4-argon` | ❌ http429 | 127ms |  |
-| model_probe | `gemini-4-carbon` | ❌ http429 | 195ms |  |
-| model_probe | `gemini-4-hydrogen` | ❌ http503 | 534ms |  |
+| N1_screen | `gemini-3.5-flash-lite` | ✅ | 4774ms | {"shortlist": [1484511465, 256580326, 1612090432], "note": "優先選擇高學習價值、 |
+| N2_deep | `gemini-3.5-flash-lite` | ❌ http503 | 728ms |  |
+| decision | `gemini-3.5-flash-lite` | ❌ http503 | 1518ms |  |
+| decision | `gemini-3.5-flash-lite` | ❌ http503 | 1230ms |  |
+| model_probe | `gemini-4-argon` | ❌ http429 | 171ms |  |
+| model_probe | `gemini-4-carbon` | ❌ http429 | 147ms |  |
+| model_probe | `gemini-4-hydrogen` | ❌ http503 | 520ms |  |
+| model_probe | `gemini-4-neon` | ❌ http429 | 161ms |  |
+| model_probe | `gemini-3.8-flash` | ❌ http503 | 490ms |  |
+| model_probe | `gemini-3.7-flash` | ❌ http503 | 521ms |  |
+| model_probe | `gemini-3.6-flash` | ❌ http503 | 837ms |  |
+| model_probe | `gemini-3.5-flash` | ❌ http503 | 690ms |  |
+| model_probe | `gemini-3.5-flash-lite` | ✅ | 8832ms | {"model": "gpt-4o", "ok": true} |
+| decision | `gemini-3.5-flash-lite` | ❌ http503 | 1229ms |  |
+| decision | `gemini-3.5-flash-lite` | ❌ http503 | 3795ms |  |
+| model_probe | `gemini-4-argon` | ❌ http429 | 186ms |  |
+| model_probe | `gemini-4-carbon` | ❌ http429 | 142ms |  |
+| model_probe | `gemini-4-hydrogen` | ❌ http503 | 636ms |  |
+| model_probe | `gemini-4-neon` | ❌ http429 | 143ms |  |
+| model_probe | `gemini-3.8-flash` | ❌ http503 | 428ms |  |
+| model_probe | `gemini-3.7-flash` | ❌ http503 | 1294ms |  |
+| model_probe | `gemini-3.6-flash` | ❌ http429 | 174ms |  |
+| model_probe | `gemini-3.5-flash` | ❌ http503 | 772ms |  |
+| model_probe | `gemini-3.5-flash-lite` | ✅ | 963ms | {
+  "model": "gpt-4o",
+  "ok": true
+} |
+| decision | `gemini-3.5-flash-lite` | ❌ http503 | 895ms |  |
+| decision | `gemini-3.5-flash-lite` | ❌ http503 | 880ms |  |
+| model_probe | `gemini-4-argon` | ❌ http429 | 170ms |  |
+| model_probe | `gemini-4-carbon` | ❌ http429 | 134ms |  |
+| model_probe | `gemini-4-hydrogen` | ❌ http503 | 510ms |  |
 | model_probe | `gemini-4-neon` | ❌ http429 | 131ms |  |
-| model_probe | `gemini-3.8-flash` | ❌ http503 | 1468ms |  |
-| model_probe | `gemini-3.7-flash` | ❌ http503 | 544ms |  |
-| model_probe | `gemini-3.6-flash` | ❌ http503 | 1066ms |  |
-| model_probe | `gemini-3.5-flash` | ❌ http503 | 2782ms |  |
-| model_probe | `gemini-3.5-flash-lite` | ✅ | 718ms | {"ok": true} |
-| decision | `gemini-3.5-flash-lite` | ✅ | 1773ms | {
-  "recommend": 1484511465,
-  "reasons": "Cautionary Tales with Tim H |
+| model_probe | `gemini-3.8-flash` | ❌ http429 | 196ms |  |
+| model_probe | `gemini-3.7-flash` | ❌ http503 | 493ms |  |
+| model_probe | `gemini-3.6-flash` | ❌ http429 | 129ms |  |
+| model_probe | `gemini-3.5-flash` | ❌ http503 | 802ms |  |
+| model_probe | `gemini-3.5-flash-lite` | ✅ | 803ms | {
+  "model": "gpt-4o",
+  "ok": true
+} |
 
 ## 4. 近期核准日誌（autonomy=full；人類否決通道＝對話說「停更 <名>」）
 （本月尚無核准）
