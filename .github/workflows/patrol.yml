@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "30 21 * * *"   # 05:30 台北 · 每日影子巡邏（錯峰於所有寫入窗口）
   workflow_dispatch:
+    inputs:
+      demo:
+        description: "GATE_NET_DEMO — HOLD 狀態下以真實 API 示範裁決網絡（無核准副作用）"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -30,6 +35,7 @@ jobs:
         run: python podcast/gate.py
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GATE_NET_DEMO: ${{ github.event.inputs.demo == 'true' && '1' || '' }}
 
       - name: keep
         if: always()

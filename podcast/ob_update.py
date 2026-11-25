@@ -65,6 +65,17 @@ def retry(fn, tries=6, pause=8):
     raise RuntimeError("retry exhausted")
 
 
+def retry_backoff(fn, pauses=(20, 45, 90, 180, 300)):
+    """上傳退避重試：Eudic『保存異常，請重試』為伺服器端暫時性 500——長間隔退避（11-25 ob 首航教訓）。"""
+    for k, p in enumerate(pauses):
+        try:
+            return fn()
+        except Exception as ex:
+            log(f"  backoff{k}: {str(ex)[:90]} → 等待 {p}s")
+            time.sleep(p)
+    raise RuntimeError("backoff exhausted")
+
+
 def ntfy(title, body, prio=3):
     n = os.environ.get("NTFY_URL", "")
     if not n:
@@ -471,8 +482,8 @@ def main():
                 ptitle = full if n == 1 else f"{full}（{i}/{n}）"
                 if norm(ptitle) in have:
                     continue
-                fid = upload_thumb(cover) if cover else ""
-                mid = upload_media(pf)
+                fid = retry_backoff(lambda: upload_thumb(cover)) if cover else ""
+                mid = retry_backoff(lambda: upload_media(pf))
                 sid = None
                 if eudic_slots and os.environ.get("GH_TOKEN"):
                     try:

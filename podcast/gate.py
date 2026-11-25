@@ -369,6 +369,12 @@ def _net_call(key, model, prompt, node, gs):
         log(f"net {node}: budget cap")
         return None
     gs["net_calls"] = (gs.get("net_calls") or 0) + 1
+    ym = time.strftime("%Y-%m")
+    b = gs.get("llm_calls") or {}
+    if b.get("ym") != ym:
+        b = {"ym": ym, "n": 0}
+    b["n"] += 1
+    gs["llm_calls"] = b                       # 網絡呼叫計入月額度（11-25 補漏）
     ok, txt = _llm_call(key, model, prompt, node=node)
     if not ok:
         return None
@@ -661,6 +667,11 @@ def main():
                      "開坑許可 OPEN。Top 候選：\n" +
                      "\n".join(f"• {c['name']} v2={c['score']}（{c['legal']}）" for c in top[:3]) +
                      "\n提供 GEMINI_API_KEY 即啟用自動決策", 3)
+    # DEMO（GATE_NET_DEMO=1）：非 OPEN 決策時以真實 API 示範網絡——無核准副作用，預算照計（11-25 用戶：要見真模型）
+    if os.environ.get("GATE_NET_DEMO") and not dec and top:
+        dec = net_decide(pits, steady, top, pol, gs)
+        if dec:
+            dec["demo"] = True
     gs["last_open"] = open_gate
     gs.setdefault("log", []).append(
         {"at": time.strftime("%F %T"), "open": open_gate, "streak": streak,
@@ -686,8 +697,10 @@ def main():
         md += [f"| {c['name']} | {c['score']} | {c.get('perennial')} | {c['legal']} | {c['cadence']}ep/週 | {c['median_min']}min |" for c in top] or ["（無合格候選）"]
         md += ["", "## 3. 決策"]
         if dec:
-            md += [f"- 基座：`{dec.get('model')}` ｜ recommend：**{dec['recommend']}** ｜ valid：{dec['valid']} ｜ confidence：{dec.get('confidence')} ｜ autonomy：**{autonomy}**",
-                   f"- 理由：{dec.get('reasons')}", f"- 風險：{dec.get('risks')}",
+            md += [f"- 基座：`{dec.get('model')}` ｜ recommend：**{dec['recommend']}** ｜ valid：{dec['valid']} ｜ confidence：{dec.get('confidence')} ｜ autonomy：**{autonomy}**"]
+            if dec.get("demo"):
+                md += ["- ⚠ **DEMO 運行**：非裁決（HOLD／已決狀態下的網絡示範；無核准副作用，LLM 額度照計）"]
+            md += [f"- 理由：{dec.get('reasons')}", f"- 風險：{dec.get('risks')}",
                    f"- 完成態（done_when）：{dec.get('done_when')}", f"- 證據引用：{dec.get('evidence')}"]
             net = dec.get("net") or {}
             if net:
