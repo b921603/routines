@@ -21,14 +21,19 @@ CAND = "state/candidates.json"
 
 
 def eligible_top(n=5):
-    """候選 DB → 合格開坑候選（fresh＋非 major＋非 avoid＋活躍 cadence）。"""
+    """候選 DB → 合格開坑候選（fresh＋非 major＋非 avoid＋活躍 cadence）。
+    v1.1 schema（db.items=嵌套 dict）；兼容舊 flat 版。"""
     try:
         db = json.load(open(CAND))
     except Exception:
         return []
+    raw = db.get("items") if isinstance(db, dict) else None
+    entries = raw if isinstance(raw, dict) else {
+        k: v for k, v in (db or {}).items()
+        if isinstance(v, dict) and "name" in v}
     out = []
-    for k, v in db.items():
-        if not isinstance(v, dict):
+    for k, v in entries.items():
+        if not isinstance(v, dict) or not str(k).isdigit():
             continue
         cov = v.get("coverage") or {}
         if any((w or {}).get("present") for w in cov.values() if isinstance(w, dict)):
@@ -40,9 +45,12 @@ def eligible_top(n=5):
         rss = v.get("rss") or {}
         if not (rss.get("eps_week") or 0) > 0:
             continue                              # 停更/死鏈
+        sc = (v.get("score") or {}).get("v2")
+        if isinstance(sc, dict):                 # v2=8 維分項 → 取總分
+            sc = sc.get("total")
         out.append({"itunes_id": int(k), "name": v.get("name"),
                     "artist": v.get("artist"),
-                    "score": (v.get("score") or {}).get("v2"),
+                    "score": sc,
                     "cadence": rss.get("eps_week"),
                     "legal": v.get("publisher_class"),
                     "desc": (v.get("description") or "")[:300]})
