@@ -18,7 +18,8 @@ BASE = "https://my.eudic.net"
 FEED = "https://feeds.simplecast.com/AuAxH_Bf"
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 SEG = 3600                      # 平台單篇音訊上限（秒）
-CH_NAME = "On Being with Krista Tippett"
+CH_NAME = "On Being"            # 平台 IsBannedWords 拒全名（iter-3 實錘）→ 短名（節目通用名）
+CH_NAME_CANDS = ["On Being", "On Being 慢訪談", "On Being Podcast", "On Being with Krista Tippett"]
 CH_DESC = ("Krista Tippett 的慢訪談：詩人、科學家、神學家在這裡談意識、愛、時間與失落。"
            "Michael Pollan 探問意識之謎、Robin Wall Kimmerer 帶來苔蘚的智慧——"
            "每一場對話都像在時間之外進行。英語清晰溫潤，適合精聽與跟讀。")
@@ -196,47 +197,54 @@ def norm(s):
     return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", (s or "").lower())
 
 
+def _banned_check(name):
+    """IsBannedWords：回裸 bool 或 {success:false} 兩型皆見（iter-2/3 實錘）。"""
+    rr = req("POST", f"{BASE}/ting/IsBannedWords",
+             data={"name": name, "channelId": ""}, timeout=30)
+    try:
+        res = rr.json()
+        return (res is False) or (isinstance(res, dict) and res.get("success") is False)
+    except Exception:
+        return False                         # 解析失敗≠違禁——照常嘗試
+
+
 def channel_id(force=False):
-    """CID 解析：secret OB_CID → trail/ob_channel.json → ensure（冪等自建）。"""
+    """CID 解析：secret OB_CID → trail/ob_channel.json → ensure（冪等自建）。
+    頻道名多候選（iter-3：全名被 IsBannedWords 拒→依序試至過審）。"""
     cid = os.environ.get("OB_CID", "")
     if cid and not force:
         return cid
     saved = rj(CHFILE, {}) or {}
     if saved.get("cid") and not force:
         return saved["cid"]
+    names = [saved.get("name")] if saved.get("name") else []
+    names += [n for n in CH_NAME_CANDS if n not in names]
     r = req("GET", f"{BASE}/ting/GetPrivateChannels", timeout=45)
-    for c in (r.json().get("channelList", {}).get("UploadedChannels") or []):
-        if html.unescape(c.get("Name") or "") == CH_NAME:
-            cid = c["Id"]
-            log(f"channel found: {cid}")
-            wj(CHFILE, {"cid": cid, "name": CH_NAME, "at": time.strftime("%F %T")})
-            return cid
-    # create（IsBannedWords precheck → CreatePrivateChannel；thumb 空可）
-    rr = req("POST", f"{BASE}/ting/IsBannedWords",
-             data={"name": CH_NAME, "channelId": ""}, timeout=30)
-    try:
-        _res = rr.json()                     # 平台回裸 bool 或 {success: false} 兩型皆見
-        _banned = (_res is False) or (isinstance(_res, dict) and _res.get("success") is False)
-        if _banned:
-            raise RuntimeError(f"channel name rejected: {CH_NAME}")
-    except RuntimeError:
-        raise
-    except Exception:
-        pass                                 # 解析失敗≠違禁——照常嘗試 create
-    r = req("POST", f"{BASE}/ting/CreatePrivateChannel",
-            data={"name": CH_NAME, "thumb": "", "channelType": "",
-                  "description": CH_DESC}, timeout=45)
-    if r.status_code != 200:
-        raise RuntimeError(f"create channel failed: {r.status_code} {(r.text or '')[:80]}")
-    # 回讀取得 Id
-    r2 = req("GET", f"{BASE}/ting/GetPrivateChannels", timeout=45)
-    for c in (r2.json().get("channelList", {}).get("UploadedChannels") or []):
-        if html.unescape(c.get("Name") or "") == CH_NAME:
-            cid = c["Id"]
-            log(f"channel created: {cid}")
-            wj(CHFILE, {"cid": cid, "name": CH_NAME, "at": time.strftime("%F %T")})
-            return cid
-    raise RuntimeError("channel created but not found in listing")
+    have = {html.unescape(c.get("Name") or ""): c["Id"]
+            for c in (r.json().get("channelList", {}).get("UploadedChannels") or [])}
+    for nm in names:                          # 已存在的候選名優先（冪等）
+        if nm in have:
+            log(f"channel found: {nm} → {have[nm]}")
+            wj(CHFILE, {"cid": have[nm], "name": nm, "at": time.strftime("%F %T")})
+            return have[nm]
+    for nm in names:                          # 逐候選過審→create
+        if _banned_check(nm):
+            log(f"  banned skip: {nm}")
+            continue
+        r = req("POST", f"{BASE}/ting/CreatePrivateChannel",
+                data={"name": nm, "thumb": "", "channelType": "",
+                      "description": CH_DESC}, timeout=45)
+        if r.status_code == 200 and '"success":true' in (r.text or "").replace(" ", ""):
+            log(f"channel created: {nm}")
+            have = {html.unescape(c.get("Name") or ""): c["Id"]
+                    for c in (req("GET", f"{BASE}/ting/GetPrivateChannels", timeout=45)
+                              .json().get("channelList", {}).get("UploadedChannels") or [])}
+            if nm in have:
+                wj(CHFILE, {"cid": have[nm], "name": nm, "at": time.strftime("%F %T")})
+                return have[nm]
+        log(f"  create fail: {r.status_code} {(r.text or '')[:60]}")
+        time.sleep(3)
+    raise RuntimeError(f"all channel-name candidates rejected/banned: {names}")
 
 
 def have_titles(cid):
