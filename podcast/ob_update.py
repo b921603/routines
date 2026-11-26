@@ -301,22 +301,45 @@ def channel_cover_bytes(cid):
 
 
 def upload_thumb(img):
-    r = req("POST", f"{BASE}/ting/uploadprivatemedia",
-            files={"file": ("cover.jpg", img, "image/jpeg")}, timeout=120)
-    m = re.search(r'["{]?(?:fid|fileId|id)["\s:=]+([0-9a-f\-]{36})', r.text or "")
-    if not m:
-        raise RuntimeError(f"thumb upload failed: {(r.text or '')[:80]}")
-    return m.group(1)
+    """UploadTingFile?type=thumb → fileId（tfs_engine 兩步式流程）。
+    11-25 深夜根因修復：舊版把 multipart 直砸 uploadprivatemedia（媒體建立表單端點）
+    ＝錯誤端點——500 保存异常實為 API 誤用（同窗 tff-rotate 經 UploadTingFile 上傳成功×5）。"""
+    for i in range(6):
+        busy = False
+        try:
+            r = req("POST", f"{BASE}/ting/UploadTingFile?type=thumb",
+                    files={"file": ("cover.jpg", img, "image/jpeg")}, timeout=180)
+            j = r.json()
+            if j.get("success") and (j.get("fileId") or j.get("result")):
+                return j.get("fileId") or j.get("result").split("/")[-1]
+            busy = "处理程序" in (r.text or "") or "还在处理" in (r.text or "")
+            log(f"  thumb try{i}: {(r.text or '')[:90]}")
+        except Exception as ex:
+            log(f"  thumb try{i} err: {str(ex)[:70]}")
+        time.sleep(45 if busy else min(3 + 3 * i, 18))
+    return None
 
 
 def upload_media(path):
-    with open(path, "rb") as f:
-        r = req("POST", f"{BASE}/ting/uploadprivatemedia",
-                files={"file": (os.path.basename(path), f, "audio/mpeg")}, timeout=3300)
-    m = re.search(r'["{]?(?:fid|fileId|id)["\s:=]+([0-9a-f\-]{36})', r.text or "")
-    if not m:
-        raise RuntimeError(f"media upload failed: {(r.text or '')[:80]}")
-    return m.group(1)
+    """UploadTingFile?type=media → fileId。GitHub runner→歐路上行 ~23KB/s（tfs 實測）：
+    12.8MB≈9-10min/次 → 長 socket timeout＋少量 tries（OB_MEDIA_TIMEOUT 預設 900s×2）。"""
+    payload = open(path, "rb").read()
+    timeout = int(os.environ.get("OB_MEDIA_TIMEOUT", "900"))
+    for i in range(2):
+        busy = False
+        try:
+            r = req("POST", f"{BASE}/ting/UploadTingFile?type=media",
+                    files={"file": (os.path.basename(path), payload, "audio/mpeg")},
+                    timeout=timeout)
+            j = r.json()
+            if j.get("success") and (j.get("fileId") or j.get("result")):
+                return j.get("fileId") or j.get("result").split("/")[-1]
+            busy = "处理程序" in (r.text or "") or "还在处理" in (r.text or "")
+            log(f"  upload try{i}: {(r.text or '')[:90]}")
+        except Exception as ex:
+            log(f"  upload try{i} err: {str(ex)[:70]}")
+        time.sleep(45 if busy else min(3 + 3 * i, 18))
+    return None
 
 
 def prep_audio(url, key):
@@ -482,19 +505,21 @@ def main():
                 ptitle = full if n == 1 else f"{full}（{i}/{n}）"
                 if norm(ptitle) in have:
                     continue
-                fid = retry_backoff(lambda: upload_thumb(cover)) if cover else ""
-                mid = retry_backoff(lambda: upload_media(pf))
+                fid = upload_thumb(cover) if cover else ""
+                media_fid = upload_media(pf)
+                if not media_fid:            # 上傳耗盡→本集失敗下輪續傳（TFF 同款；免雙層重試拖爆輪預算）
+                    raise RuntimeError("media upload failed (UploadTingFile exhausted)")
                 sid = None
                 if eudic_slots and os.environ.get("GH_TOKEN"):
                     try:
-                        sid = eudic_slots.claim("ob", mid, os.environ["GH_TOKEN"],
+                        sid = eudic_slots.claim("ob", media_fid, os.environ["GH_TOKEN"],
                                                 wait_min=8, ttl=300, log=log)
                     except Exception:
                         sid = None
                 okp = True
                 try:
                     # >60min 集（分段 n>1）平台拒 AI 字幕→自動 false
-                    okp = post(cid, ptitle, fid, mid, strip_html(e["desc"]),
+                    okp = post(cid, ptitle, fid, media_fid, strip_html(e["desc"]),
                                ai_sub=(n == 1))
                 except Exception:
                     okp = False

@@ -7,6 +7,7 @@
   iter-3  「channel name rejected」誤判（多候選）  → T2 多候選邏輯
   iter-5  語義反轉（True=banned/False=ok）        → T1 語義
   首航    upload_media 裸呼叫無 retry（500 風暴）  → T3 retry_backoff
+  iter-7  上傳端點誤用（multipart→uploadprivatemedia；正確＝UploadTingFile→fid→表單 create）→ T5
   巡檢    workflow 結構（concurrency/notify/preflight）→ T4
 零網路：所有平台呼叫被 monkeypatch。dispatch 前必跑；GA 端為 backfill 前置 step。
 退出碼 0=全部通過；非 0=部署禁行。
@@ -49,7 +50,7 @@ class _RR:
         self._p, self.status_code, self.text = payload, status, str(payload)
 
     def json(self):
-        return self._p
+        return json.loads(self._p) if isinstance(self._p, str) else self._p
 
 
 def t1_banned_semantics():
@@ -132,6 +133,30 @@ def t3_retry_backoff():
         pass
 
 
+def t5_upload_endpoint():
+    """iter-7 根因：multipart 直砸 uploadprivatemedia＝錯誤端點（500 保存异常風暴）。
+    正確＝UploadTingFile?type=… → fileId → 表單 create（post() media=fid）。"""
+    ob = _load_ob()
+    hits = []
+
+    def fake(m, u, **kw):
+        hits.append(u)
+        import json as _j
+        if "UploadTingFile" in u:
+            return _RR(_j.dumps({"success": True, "fileId": "fid-1234"}))
+        return _RR('{"success":true}')
+
+    ob.req = fake
+    ob.time.sleep = lambda *_: None
+    fid = ob.upload_media(os.path.abspath(__file__))
+    assert fid == "fid-1234", fid
+    t = ob.upload_thumb(b"\x89PNG-fake")
+    assert t == "fid-1234", t
+    assert any("UploadTingFile" in u for u in hits), hits
+    assert not any(u.rstrip("/").endswith("/ting/uploadprivatemedia") for u in hits), \
+        "禁止 multipart 直砸 uploadprivatemedia（11-25 根因）"
+
+
 def t4_workflow_structure():
     for wf in ("ob-backfill.yml", "ob-daily.yml", "patrol.yml"):
         p = os.path.join(WROOT, ".github", "workflows", wf)
@@ -151,6 +176,7 @@ if __name__ == "__main__":
     check("T2 頻道名多候選（iter-3）", t2_channel_multicand)
     check("T3 上傳退避重試（首航 500 風暴）", t3_retry_backoff)
     check("T4 workflow 結構衛生", t4_workflow_structure)
+    check("T5 上傳端點兩步式（iter-7 根因）", t5_upload_endpoint)
     if FAIL:
         print(f"preflight FAIL: {FAIL} —— 部署禁行")
         sys.exit(1)
