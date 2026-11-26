@@ -84,7 +84,8 @@ def list_media(cid):
                 tm = re.search(r'rl-title"[^>]*title="([^"]*)"', x)
                 mid = re.search(r'media_id"[^>]*data="([^"]+)"', x)
                 if tm and mid and mid.group(1) not in seen:
-                    out.append((H.unescape(tm.group(1)), mid.group(1)))
+                    bare = ("no-cover" in x) or ("default.png" in x)
+                    out.append((H.unescape(tm.group(1)), mid.group(1), bare))
                     seen.add(mid.group(1))
                     got += 1
             if not got:
@@ -145,7 +146,7 @@ def patch_zombie_thumbs(cid):
         for v in led.values():
             if v.get("how") == "heal":
                 targets.setdefault(OB.norm(v.get("title", "")), v.get("title", ""))
-        log(f"殭屍補縮圖：heal 目標 {len(targets)} 集")
+        log(f"縮圖補貼：heal 目標 {len(targets)} 集＋頻道裸圖掃描（11-26 泛化）")
         if not targets:
             return
         art = OB.feed_channel_art()
@@ -161,14 +162,14 @@ def patch_zombie_thumbs(cid):
         log(f"  頻道媒體 listing: {len(media)} 條")
         patched = skipped = 0
         dbg = False
-        for title, mid in media:
+        for title, mid, bare in media:
             if patched + skipped >= MAX_PATCH:
                 log("  MAX_PATCH 達上限——留尾（冪等可重跑）")
                 break
             key = OB.norm(title)
             hit = next((t for k, t in targets.items() if key.startswith(k)), None)
-            if not hit:
-                continue
+            if not hit and not bare:
+                continue            # 11-26 泛化：heal 配對或 listing 裸圖旗標都補
             ep = OB.req("GET", f"{OB.BASE}/Ting/upload?channelid={cid}"
                                f"&mediaid={mid}&itemType=0", timeout=45).text or ""
             info = parse_edit_page(ep)
