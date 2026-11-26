@@ -156,6 +156,7 @@ def patch_zombie_thumbs(cid):
         media = list_media(cid)
         log(f"  頻道媒體 listing: {len(media)} 條")
         patched = skipped = 0
+        dbg = False
         for title, mid in media:
             if patched + skipped >= MAX_PATCH:
                 log("  MAX_PATCH 達上限——留尾（冪等可重跑）")
@@ -167,6 +168,10 @@ def patch_zombie_thumbs(cid):
             ep = OB.req("GET", f"{OB.BASE}/Ting/upload?channelid={cid}"
                                f"&mediaid={mid}&itemType=0", timeout=45).text or ""
             info = parse_edit_page(ep)
+            if not dbg:      # 縮圖診斷：edit page 的 img 欄位實際形狀
+                mdbg = re.search(r"<img[^>]*channel_img_img_last[^>]*>", ep)
+                log(f"  [dbg] img tag: {mdbg.group(0)[:170] if mdbg else '(無 img)'}")
+                dbg = True
             if info["thumb_data_src"] and "default" not in info["thumb_data_src"]:
                 log(f"  跳過（已有縮圖）: {title[:50]}")
                 skipped += 1
