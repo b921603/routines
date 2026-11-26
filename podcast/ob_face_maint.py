@@ -61,6 +61,10 @@ def parse_edit_page(text):
     out["intros_html"] = m.group(1).strip() if m else ""
     m = re.search(r'class="channel_img_img_last"[^>]*data-src="([^"]*)"', text)
     out["thumb_data_src"] = m.group(1) if m else ""
+    # 11-26 三輪教訓：ob 的 edit page 縮圖在 src=（非 data-src）——兩處都看才判定「已有縮圖」
+    if not out["thumb_data_src"]:
+        m = re.search(r'class="channel_img_img_last"[^>]*src="([^"]*)"', text)
+        out["thumb_data_src"] = m.group(1) if m else ""
     m = re.search(r'text_add_img_last"[^>]*data-fileid="([^"]*)"', text)
     out["thumb_fileid"] = m.group(1) if m else ""
     return out
