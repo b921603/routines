@@ -54,6 +54,7 @@ def _load_ob():
 class _RR:
     def __init__(self, payload, status=200):
         self._p, self.status_code, self.text = payload, status, str(payload)
+        self.content = payload if isinstance(payload, bytes) else str(payload).encode()
 
     def json(self):
         return json.loads(self._p) if isinstance(self._p, str) else self._p
@@ -248,6 +249,88 @@ def t8_group_and_parts():
     ob.req = ob._orig_req
 
 
+def t9_engine_kit():
+    """T-080 標準件：ShowConfig→機制正典（auth/upload 兩步式/per-part）離線驗證。"""
+    sys.path.insert(0, os.path.join(WROOT, "podcast"))
+    import engine_kit as kit
+    cfg = kit.ShowConfig(key="kittest", itunes_id=1, name="Kit Test Show",
+                         feed_url="https://example.invalid/feed.xml",
+                         channel_names=["Kit Test Show"], group_name="Kit Test",
+                         seg_seconds=3600)
+    assert cfg.p_ledger().endswith("done_kittest.json")
+    assert cfg.p_parts().endswith("kittest_parts.jsonl")
+    # auth 偵測（模式②）
+    kit.time.sleep = lambda *_: None
+    kit._last_req[0] = 0.0
+
+    class _Ses:
+        def __init__(self, code, body): self.code, self.body = code, body
+        def request(self, *a, **kw): return _RR(self.body, self.code)
+
+    kit.SES = _Ses(401, "unauth")
+    try:
+        kit.req("GET", "https://x/", timeout=5)
+        raise AssertionError("401 應拋 AuthError")
+    except kit.AuthError:
+        pass
+    # 上傳兩步式（模式①）：正端點＋fid 回傳
+    hits = []
+    kit.SES = _Ses(200, "")
+    def fake(m, u, **kw):
+        hits.append(u)
+        return _RR(json.dumps({"success": True, "fileId": "fid-kit"}), 200)
+    kit.SES.request = fake
+    fid = kit.eudic_upload("thumb", "c.jpg", b"x" * 9000, "image/jpeg")
+    assert fid == "fid-kit" and any("UploadTingFile" in u for u in hits)
+    # per-part roundtrip（模式⑤）
+    import tempfile
+    old = kit.TRAIL
+    kit.TRAIL = tempfile.mkdtemp()
+    cfg2 = kit.ShowConfig(key="kittest", itunes_id=1, name="x", feed_url="u",
+                          channel_names=["x"], group_name="g")
+    kit.parts_mark(cfg2, "g-9", 1, "t", "c", "m-1")
+    assert ("g-9", 1) in kit.parts_marked(cfg2)
+    kit.TRAIL = old
+
+
+def t10_covers_sop():
+    """封面 SOP：政策表（rss_or_generate 生成降級／never 不上傳／per-ep hash 快取）。"""
+    sys.path.insert(0, os.path.join(WROOT, "podcast"))
+    import engine_kit as kit
+    import covers
+    covers.req = lambda m, u, **kw: _RR("<html/>", 404)   # 無網/無 feed——離線
+    cfg = kit.ShowConfig(key="kittest", itunes_id=1, name="Generated Cover Show",
+                         feed_url="u", channel_names=["x"], group_name="g")
+    img = covers.generated_cover(cfg.name, cfg.accent)
+    assert img is None or (len(img) > 5000 and img[:2] == b"\xff\xd8"), "JPEG 生成或 None 降級"
+    tc = kit.ThumbCache()
+    n = {"c": 0}
+    kit.eudic_upload = lambda kind, fn, payload, mime, media_timeout=900: (
+        n.__setitem__("c", n["c"] + 1) or "cov-fid")
+    if img:
+        fid1 = covers.ensure_channel_art(cfg, tc)
+        fid2 = covers.ensure_channel_art(cfg, tc)
+        assert fid1 == fid2 == "cov-fid" and n["c"] == 1, "頻道封面每 run 一次"
+    # never 政策＝零上傳
+    cfg_never = kit.ShowConfig(key="kittest", itunes_id=1, name="x", feed_url="u",
+                               channel_names=["x"], group_name="g", channel_art="never")
+    n["c"] = 0
+    assert covers.ensure_channel_art(cfg_never, tc) == "" and n["c"] == 0
+    # per-ep hash 快取：同 URL 第二次不重下載（真函數的快取邏輯＋網路計數）
+    import tempfile
+    net = {"n": 0}
+    orig_covers_req = covers.req
+    covers.req = lambda m, u, **kw: (net.__setitem__("n", net["n"] + 1)
+                                     or _RR(b"\xff\xd8" + b"x" * 6000, 200))
+    _cdir = tempfile.mkdtemp()
+    covers._cache_dir = lambda key: _cdir          # 單一目錄重用（每次新建=快取永 miss）
+    img1 = covers.episode_art_from_item("https://x/ep9.jpg", "k")
+    img2 = covers.episode_art_from_item("https://x/ep9.jpg", "k")
+    assert net["n"] == 1, f"hash 快取應命中（net={net['n']}）"
+    assert img1 == img2 and img1 is not None
+    covers.req = orig_covers_req
+
+
 def t4_workflow_structure():
     for wf in ("ob-backfill.yml", "ob-daily.yml", "patrol.yml"):
         p = os.path.join(WROOT, ".github", "workflows", wf)
@@ -271,6 +354,8 @@ if __name__ == "__main__":
     check("T6 auth 防護＋GAP 節流（繼承審計 A/B）", t6_auth_guard)
     check("T7 thumb 快取單次上傳（繼承審計 C）", t7_thumb_cache)
     check("T8 分組綁定＋per-part ledger（缺口 F/G）", t8_group_and_parts)
+    check("T9 engine_kit 標準件（T-080 正典）", t9_engine_kit)
+    check("T10 封面 SOP（政策表＋孤兒防線）", t10_covers_sop)
     if FAIL:
         print(f"preflight FAIL: {FAIL} —— 部署禁行")
         sys.exit(1)
