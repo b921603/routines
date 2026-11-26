@@ -61,7 +61,7 @@ jobs:
         run: |
           git config user.name "ob-bot"
           git config user.email "b921603@users.noreply.github.com"
-          git add trail/ob_channel.json trail/done_ob.json trail/ob-pit.json \
+          git add trail/ \
                   trail/ob_channels.json trail/ob_binds.json trail/ob_parts.jsonl 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "ob trail: run ${{ github.run_id }} [skip ci]"
