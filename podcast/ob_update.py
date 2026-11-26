@@ -468,7 +468,7 @@ def strip_html(s):
     return re.sub(r"<[^>]+>", " ", s or "").strip()
 
 
-SLOT_BUSY = ("处理程序", "资源处理")
+SLOT_BUSY = ("处理程序", "资源处理", "资源进程")
 try:
     import eudic_slots
 except Exception:
@@ -489,7 +489,12 @@ def post(cid, title, thumb_fid, media_fid, desc, ai_sub=True):
     for k in range(10):
         try:
             r = req("POST", f"{BASE}/ting/uploadprivatemedia", data=data, timeout=120)
-            if r.status_code == 200 and '"success":true' in (r.text or "").replace(" ", ""):
+            flat = (r.text or "").replace(" ", "")
+            # 11-26 根因修復（殭屍 run 45727889185 驗屍）：uploadprivatemedia 成功回
+            # {"code":200,"message":"保存成功","data":null}——舊判定抄 DeletePriveteMedia
+            # 的 "success":true 形狀→永不認成功→每集連傳 5 份＋判失敗不入帳本。
+            # 對齊 tfs_engine（895 集實證）的 code:200 判定；busy 訊息補 资源进程。
+            if r.status_code == 200 and ('"code":200' in flat or '"success":true' in flat):
                 return True
             txt = r.text or ""
             if any(b in txt for b in SLOT_BUSY):
