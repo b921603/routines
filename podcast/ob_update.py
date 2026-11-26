@@ -19,7 +19,7 @@ FEED = "https://feeds.simplecast.com/AuAxH_Bf"
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
 SEG = 3600                      # 平台單篇音訊上限（秒）
 CH_NAME = "On Being"            # 平台 IsBannedWords 拒全名（iter-3 實錘）→ 短名（節目通用名）
-CH_NAME_CANDS = ["On Being", "On Being 慢訪談", "On Being Podcast", "On Being with Krista Tippett"]
+CH_NAME_CANDS = ["On Being with Krista Tippett", "On Being", "On Being 慢訪談", "On Being Podcast"]
 CH_DESC = ("Krista Tippett 的慢訪談：詩人、科學家、神學家在這裡談意識、愛、時間與失落。"
            "Michael Pollan 探問意識之謎、Robin Wall Kimmerer 帶來苔蘚的智慧——"
            "每一場對話都像在時間之外進行。英語清晰溫潤，適合精聽與跟讀。")
@@ -514,7 +514,27 @@ def post(cid, title, thumb_fid, media_fid, desc, ai_sub=True):
     return False
 
 
-OB_GROUP = os.environ.get("OB_GROUP_NAME", "On Being")
+OB_GROUP = os.environ.get("OB_GROUP_NAME", "On Being with Krista Tippett")
+
+
+def _find_ob_group(gl):
+    """OB 分組查找三層：名稱全等 → 唯一非 TFF/HTF/Bulwark（elimination）→ 名含 being。
+    11-26 用戶已自行改名分組（實名 'On Being with Krista Tippett'）——名稱非恆定，
+    啟發法保證改名後仍能找到、不重複建組。"""
+    grp = next((c for c in gl if c.get("Name") == OB_GROUP), None)
+    if grp:
+        return grp
+    unk = [c for c in gl
+           if not any((c.get("Id") or "").startswith(p)
+                      for p in ("9007fbda", "de9abbba", "87c5aed8"))]
+    if len(unk) == 1:
+        log(f"  group by-elimination: {unk[0].get('Name')!r}")
+        return unk[0]
+    if any("being" in (c.get("Name") or "").lower() for c in unk):
+        g = next(c for c in unk if "being" in (c.get("Name") or "").lower())
+        log(f"  group by-name-contains: {g.get('Name')!r}")
+        return g
+    return None
 
 
 def ensure_ob_group(cid):
@@ -525,16 +545,7 @@ def ensure_ob_group(cid):
         gl = (req("POST", f"{BASE}/ting/GetPrivateGroups?withDefault=false",
                   data="", timeout=40).json()
               .get("channelList", {}).get("UploadedChannels", []))
-        grp = next((c for c in gl if c.get("Name") == OB_GROUP), None)
-        if not grp:
-            # 11-26 用戶已自行改名分組——名稱找不到時，僅剩的一個非 TFF/HTF/Bulwark
-            # 分組視為 OB 分組（ob_face_maint 偵查同款啟發法）。
-            unk = [c for c in gl
-                   if not any((c.get("Id") or "").startswith(p)
-                              for p in ("9007fbda", "de9abbba", "87c5aed8"))]
-            if len(unk) == 1:
-                grp = unk[0]
-                log(f"  group by-elimination: {grp.get('Name')!r}")
+        grp = _find_ob_group(gl)
         if not grp:
             r = req("POST", f"{BASE}/ting/CreatePrivateChannel?itemtype=7",
                     data={"name": OB_GROUP, "thumb": "", "channelType": "2",
@@ -543,7 +554,7 @@ def ensure_ob_group(cid):
             gl = (req("POST", f"{BASE}/ting/GetPrivateGroups?withDefault=false",
                       data="", timeout=40).json()
                   .get("channelList", {}).get("UploadedChannels", []))
-            grp = next((c for c in gl if c.get("Name") == OB_GROUP), None)
+            grp = _find_ob_group(gl)
             if not grp:
                 log("  group create failed — skip (retry next run)")
                 return
@@ -600,7 +611,7 @@ def ensure_channel_cover(cid, name):
             log("channel cover: 上傳失敗（下輪再試）")
             return
         r2 = req("POST", f"{BASE}/ting/UpdatePrivateChannel",
-                 data={"id": cid, "name": name or ch.get("Name", ""), "thumb": fid,
+                 data={"id": cid, "name": ch.get("Name") or name, "thumb": fid,
                        "channelType": ch.get("ChannelType") or "",
                        "description": html.unescape(ch.get("Description") or "")},
                  timeout=60)

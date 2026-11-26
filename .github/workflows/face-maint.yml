@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: face-maint         # 獨立組：與 backfill 並行安全（資源進程 2<5；媒體互斥）
@@ -28,3 +28,16 @@ jobs:
           PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
           OB_CID: ${{ secrets.OB_CID }}
           NTFY_URL: ${{ secrets.NTFY_URL }}
+
+      - name: commit CHFILE refresh (channel rename follows user)
+        if: always()
+        run: |
+          git config user.name "ob-bot"
+          git config user.email "b921603@users.noreply.github.com"
+          git add trail/ob_channel.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "ob channel rename sync [skip ci]"
+            git pull --rebase origin main || true
+            git push || (sleep 8 && git pull --rebase origin main && git push) \
+              || echo "push deferred (race)"
+          fi

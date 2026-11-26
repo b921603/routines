@@ -88,7 +88,7 @@ def list_media(cid):
     return out
 
 
-def set_group_desc(grps, gid_prefix, desc, tag):
+def set_group_desc(grps, gid_prefix, desc, tag, get_fid=None):
     try:
         grp = next((c for c in grps if (c.get("Id") or "").startswith(gid_prefix)), None)
         if not grp:
@@ -100,16 +100,27 @@ def set_group_desc(grps, gid_prefix, desc, tag):
             return
         gid = grp["Id"]
         name = grp.get("Name") or ""
-        thumb = grp.get("Thumb") or ""
         ctype = grp.get("ChannelType") or "2"
+        # thumb 三段策略（首輪教訓：分組 Thumb=URL→「上传文件路径不合法」）：
+        # 省略 → 空 → 上傳 fileId（htf_channel_desc：thumb 必須是上傳後的檔案 id）
         for shape in ({"id": gid}, {"channelId": gid}):
-            data = dict(shape)
-            data.update({"name": name, "thumb": thumb, "channelType": ctype,
-                         "description": desc})
-            r = OB.req("POST", f"{OB.BASE}/ting/UpdatePrivateChannel?itemtype=7",
-                       data=data, timeout=60)
-            log(f"  [{tag}] update({list(shape)[0]}): {r.status_code} {(r.text or '')[:70]}")
-            if r.status_code == 200 and "error" not in (r.text or "").lower():
+            for tmode in ("omit", "empty", "fid"):
+                data = dict(shape)
+                data.update({"name": name, "channelType": ctype, "description": desc})
+                if tmode == "empty":
+                    data["thumb"] = ""
+                elif tmode == "fid":
+                    f = get_fid() if get_fid else None
+                    if not f:
+                        continue
+                    data["thumb"] = f
+                r = OB.req("POST", f"{OB.BASE}/ting/UpdatePrivateChannel?itemtype=7",
+                           data=data, timeout=60)
+                ok = r.status_code == 200 and '"success":false' not in (r.text or "")
+                log(f"  [{tag}] update({list(shape)[0]}/thumb={tmode}): "
+                    f"{r.status_code} {(r.text or '')[:60]}")
+                if not ok:
+                    continue
                 g2 = OB.req("POST", f"{OB.BASE}/ting/GetPrivateGroups?withDefault=false",
                             data="", timeout=40).json() \
                     .get("channelList", {}).get("UploadedChannels", [])
@@ -117,8 +128,8 @@ def set_group_desc(grps, gid_prefix, desc, tag):
                 okc = desc.strip()[:16] in (after.get("Description") or "")
                 log(f"  [{tag}] verify: {'✓ 已寫入' if okc else '✗ 未見生效'}")
                 if okc:
-                    return
-        log(f"  [{tag}] 兩種參數形狀都未生效——留下次")
+                    return True
+        log(f"  [{tag}] 全部形狀未生效——留下次")
     except Exception as ex:
         log(f"  [{tag}] err（非致命）: {str(ex)[:80]}")
 
@@ -212,6 +223,13 @@ def main():
     for c in chs:
         log(f"  CH {c.get('Id')}  {(c.get('Name') or '')[:40]!r}  "
             f"type={c.get('ChannelType')} thumb={'有' if c.get('Thumb') else '無'}")
+    # 名稱刷新（用戶改名後 CHFILE 跟上——輪轉命名基底由此而來）
+    ob_ch = next((c for c in chs if c.get("Id") == cid), None)
+    saved = OB.rj(OB.CHFILE, {}) or {}
+    if ob_ch and saved.get("name") != ob_ch.get("Name"):
+        OB.wj(OB.CHFILE, {"cid": cid, "name": ob_ch.get("Name"),
+                          "at": time.strftime("%F %T")})
+        log(f"CHFILE 名稱刷新: {ob_ch.get('Name')!r}")
     grps = OB.req("POST", f"{OB.BASE}/ting/GetPrivateGroups?withDefault=false",
                   data="", timeout=40).json() \
         .get("channelList", {}).get("UploadedChannels", [])
@@ -222,23 +240,33 @@ def main():
             f"thumb={'有' if g.get('Thumb') else '無'}")
 
     log("=== ② 分組簡介（策展語气） ===")
-    set_group_desc(grps, TFF_GP, TFF_DESC, "TFF")
-    set_group_desc(grps, HTF_GP, HTF_DESC, "HTF")
+    _fid_cache = []
+
+    def get_fid():
+        if _fid_cache:
+            return _fid_cache[0]
+        art = OB.feed_channel_art()
+        f = OB.upload_thumb(art) if art else None
+        _fid_cache.append(f or "")
+        return _fid_cache[0]
+
+    set_group_desc(grps, TFF_GP, TFF_DESC, "TFF", get_fid)
+    set_group_desc(grps, HTF_GP, HTF_DESC, "HTF", get_fid)
     unknown = [g for g in grps if not any((g.get("Id") or "").startswith(p)
                                           for p in (TFF_GP, HTF_GP, BWK_GP))]
     if len(unknown) == 1:
         ob_prefix = unknown[0]["Id"][:8]
         log(f"OB 分組判定: {unknown[0].get('Name')!r} ({ob_prefix})")
-        set_group_desc(grps, ob_prefix, OB_DESC, "OB")
+        set_group_desc(grps, ob_prefix, OB_DESC, "OB", get_fid)
     elif any("being" in (g.get("Name") or "").lower() for g in unknown):
         g = next(g for g in unknown if "being" in (g.get("Name") or "").lower())
-        set_group_desc(grps, g["Id"][:8], OB_DESC, "OB")
+        set_group_desc(grps, g["Id"][:8], OB_DESC, "OB", get_fid)
     else:
         log(f"OB 分組無法唯一判定（unknown={len(unknown)}）——請人工確認名稱")
 
     log("=== ③ 殭屍 11 集補縮圖 ===")
     patch_zombie_thumbs(cid)
-    OB.ntfy("On Being 門面維護完成",
+    OB.ntfy("On Being face-maint done",
             "偵查＋三組簡介＋殭屍補縮圖已執行——詳見 Actions log。", 2)
     log("=== MAINT DONE ===")
 
