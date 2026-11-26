@@ -331,6 +331,61 @@ def t10_covers_sop():
     covers.req = orig_covers_req
 
 
+def t11_channel_cover():
+    """封面 SOP：頻道缺 thumb→RSS art→UploadTingFile→UpdatePrivateChannel（thumb 非空）。"""
+    ob = _load_ob()
+    ob.req = ob._orig_req
+    ob.time.sleep = lambda *_: None
+    ob._last_req[0] = 0.0
+    calls = []
+
+    def fake(m, u, **kw):
+        calls.append(u)
+        if u.endswith("GetPrivateChannels"):
+            return _RR({"channelList": {"UploadedChannels": [
+                {"Id": "ob-cid", "Name": "On Being", "Thumb": "https://x/default.png",
+                 "ChannelType": "", "Description": "d"}]}})
+        if "UploadTingFile" in u:
+            return _RR(json.dumps({"success": True, "fileId": "cov-fid"}))
+        if u.endswith("UpdatePrivateChannel"):
+            body = json.dumps(kw.get("data") or {})
+            assert '"thumb": "cov-fid"' in body.replace("\\", ""), body
+            return _RR('{"success":true}')
+        return _RR("")
+
+    ob.req = fake
+    ob.requests.get = lambda *a, **kw: _RR(b"\xff\xd8" + b"x" * 9000, 200)
+    ob.feed_channel_art = lambda: b"\xff\xd8art"
+    ob.ensure_channel_cover("ob-cid", "On Being")
+    assert any("UpdatePrivateChannel" in u for u in calls)
+    ob.req = ob._orig_req
+
+
+def t12_episode_thumb_policy():
+    """各集封面：per-item 插畫→URL 快取（多分片一次上傳）；無插畫→頻道封面 fallback。"""
+    ob = _load_ob()
+    ob.req = ob._orig_req
+    ob.time.sleep = lambda *_: None
+    ob._EPART = {}
+    ob._THUMB["fid"] = ""
+    n = {"thumb_uploads": 0}
+
+    def fake_up(img):
+        n["thumb_uploads"] += 1
+        return f"tf-{n['thumb_uploads']}"
+
+    ob.upload_thumb = fake_up
+    ob.requests.get = lambda *a, **kw: _RR(b"\xff\xd8" + b"x" * 9000, 200)
+    a = ob.ep_thumb_fid({"img": "https://x/ep.jpg"}, b"chan-art")
+    b_ = ob.ep_thumb_fid({"img": "https://x/ep.jpg"}, b"chan-art")
+    assert a == b_ == "tf-1" and n["thumb_uploads"] == 1, (a, b_, n)
+    c = ob.ep_thumb_fid({"img": ""}, b"chan-art")            # 無 per-ep→頻道封面
+    assert c == "tf-2" and n["thumb_uploads"] == 2           # 頻道封面 run 級快取首次上傳
+    d = ob.ep_thumb_fid({"img": ""}, b"chan-art")
+    assert d == c and n["thumb_uploads"] == 2, "頻道封面應快取"
+    ob.upload_thumb = ob.__dict__.get("_orig_up", ob.upload_thumb)
+
+
 def t4_workflow_structure():
     for wf in ("ob-backfill.yml", "ob-daily.yml", "patrol.yml"):
         p = os.path.join(WROOT, ".github", "workflows", wf)
@@ -356,6 +411,8 @@ if __name__ == "__main__":
     check("T8 分組綁定＋per-part ledger（缺口 F/G）", t8_group_and_parts)
     check("T9 engine_kit 標準件（T-080 正典）", t9_engine_kit)
     check("T10 封面 SOP（政策表＋孤兒防線）", t10_covers_sop)
+    check("T11 頻道封面補設（ob 間責修復）", t11_channel_cover)
+    check("T12 各集封面政策（per-ep 快取＋fallback）", t12_episode_thumb_policy)
     if FAIL:
         print(f"preflight FAIL: {FAIL} —— 部署禁行")
         sys.exit(1)

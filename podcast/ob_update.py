@@ -263,6 +263,8 @@ def rss_items():
         t = re.search(r"<title>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</title>", blk, re.S)
         d = re.search(r"<pubDate>([^<]+)</pubDate>", blk)
         enc = re.search(r'<enclosure[^>]*url="([^"]+)"', blk)
+        img = re.search(r'<itunes:image[^>]*href="([^"]+)"', blk) or \
+            re.search(r"<image>.*?<url>([^<]+)</url>", blk, re.S)
         g = re.search(r"<guid[^>]*>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</guid>", blk, re.S)
         de = re.search(r"<description>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</description>", blk, re.S)
         if not (t and d):
@@ -272,7 +274,8 @@ def rss_items():
                       "url": html.unescape(enc.group(1)) if enc else "",
                       "guid": html.unescape(g.group(1)).strip() if g
                               else (html.unescape(enc.group(1)) if enc else ""),
-                      "desc": html.unescape(de.group(1)).strip() if de else ""})
+                      "desc": html.unescape(de.group(1)).strip() if de else "",
+                      "img": html.unescape(img.group(1)).strip() if img else ""})
     return items
 
 
@@ -538,6 +541,74 @@ def ensure_ob_group(cid):
         log(f"  group err（非致命）: {str(ex)[:80]}")
 
 
+def feed_channel_art():
+    """RSS 頻道級插畫（<channel> 的 itunes:image）→ bytes|None。"""
+    try:
+        r = retry(lambda: requests.get(FEED, headers=UA, timeout=90))
+        head = (r.text or "")[:60000]
+        m = re.search(r"<itunes:image[^>]*href=\"([^\"]+)\"", head) or \
+            re.search(r"<image>.*?<url>([^<]+)</url>", head, re.S)
+        if not m:
+            return None
+        img = requests.get(m.group(1), headers=UA, timeout=60)
+        return img.content if img.status_code == 200 and len(img.content) > 5000 else None
+    except Exception as ex:
+        log(f"feed art err: {str(ex)[:60]}")
+        return None
+
+
+def ensure_channel_cover(cid, name):
+    """頻道級封面（11-26 用戶問責：ob 從未設過——create 時 thumb 空，各集 fallback 也拿不到）。
+    缺封面→RSS 頻道插畫→UploadTingFile→UpdatePrivateChannel（thumb 不可空——正是本呼叫在補）。"""
+    try:
+        r = req("GET", f"{BASE}/ting/GetPrivateChannels", timeout=45)
+        ch = next((c for c in (r.json().get("channelList", {}).get("UploadedChannels") or [])
+                   if c.get("Id") == cid), None)
+        if not ch:
+            return
+        cur = ch.get("Thumb") or ""
+        if cur and "default.png" not in cur:
+            log("channel cover: 已有（跳過）")
+            return
+        art = feed_channel_art()
+        if not art:
+            log("channel cover: RSS 無頻道插畫——維持預設")
+            return
+        fid = upload_thumb(art)
+        if not fid:
+            log("channel cover: 上傳失敗（下輪再試）")
+            return
+        r2 = req("POST", f"{BASE}/ting/UpdatePrivateChannel",
+                 data={"id": cid, "name": name or ch.get("Name", ""), "thumb": fid,
+                       "channelType": ch.get("ChannelType") or "",
+                       "description": html.unescape(ch.get("Description") or "")},
+                 timeout=60)
+        log(f"channel cover: UpdatePrivateChannel {r2.status_code} {(r2.text or '')[:50]}")
+    except Exception as ex:
+        log(f"channel cover err（非致命）: {str(ex)[:80]}")
+
+
+_EPART = {}                                # per-ep 插畫快取（URL→fid；多分片共用一次上傳）
+
+
+def ep_thumb_fid(e, fallback_img):
+    """各集封面（11-26 用戶要求）：per-item RSS 插畫→上傳（URL 快取）；無→沿用頻道封面。"""
+    u = e.get("img") or ""
+    if u:
+        if u in _EPART:
+            return _EPART[u]
+        try:
+            img = requests.get(u, headers=UA, timeout=60).content
+        except Exception:
+            img = b""
+        if len(img) > 5000:
+            f = upload_thumb(img)
+            _EPART[u] = f or ""
+            if f:
+                return _EPART[u]
+    return thumb_fid(fallback_img)
+
+
 def audit(cid):
     nb = nc = 0
     try:
@@ -581,6 +652,7 @@ def main():
     login()
     cid = channel_id()
     ensure_ob_group(cid)
+    ensure_channel_cover(cid, (rj(CHFILE, {}) or {}).get("name", ""))
     cover = channel_cover_bytes(cid)
     items = rss_items()
     catalog = [e for e in items if e["url"]]
@@ -633,7 +705,7 @@ def main():
                 ptitle = full if n == 1 else f"{full}（{i}/{n}）"
                 if norm(ptitle) in have or (e["guid"], i) in marked:
                     continue
-                fid = thumb_fid(cover)
+                fid = ep_thumb_fid(e, cover)
                 media_fid = upload_media(pf)
                 if not media_fid:            # 上傳耗盡→本集失敗下輪續傳（TFF 同款；免雙層重試拖爆輪預算）
                     raise RuntimeError("media upload failed (UploadTingFile exhausted)")
