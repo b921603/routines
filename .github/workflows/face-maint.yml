@@ -1,0 +1,30 @@
+name: face-maint
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: face-maint         # 獨立組：與 backfill 並行安全（資源進程 2<5；媒體互斥）
+  cancel-in-progress: false
+
+jobs:
+  maint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: face maintenance (discover + group descs + zombie thumbs)
+        run: python podcast/ob_face_maint.py
+        env:
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
+          OB_CID: ${{ secrets.OB_CID }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
