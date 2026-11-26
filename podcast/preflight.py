@@ -240,13 +240,68 @@ def t8_group_and_parts():
     assert any("AddChannelsToPrivateGroup" in u for u in hits), "應綁定頻道"
     # per-part：mark→load roundtrip＋resume 語義
     import tempfile, os as _os
-    old_parts = ob.PARTS
-    ob.PARTS = _os.path.join(tempfile.mkdtemp(), "ob_parts.jsonl")
+    _d = tempfile.mkdtemp()
+    old_parts, old_binds, old_chf, old_obchs = ob.PARTS, ob.BINDS, ob.CHFILE, ob.OBCHS
+    ob.PARTS = _os.path.join(_d, "ob_parts.jsonl")
+    ob.BINDS = _os.path.join(_d, "ob_binds.json")
+    ob.CHFILE = _os.path.join(_d, "ob_channel.json")
+    ob.OBCHS = _os.path.join(_d, "ob_channels.json")
     ob.parts_mark("g-1", 2, "t", "c", "mid-9")
     assert ("g-1", 2) in ob.parts_marked()
     assert ("g-1", 1) not in ob.parts_marked()
-    ob.PARTS = old_parts
+    ob.PARTS, ob.BINDS, ob.CHFILE, ob.OBCHS = old_parts, old_binds, old_chf, old_obchs
     ob.req = ob._orig_req
+
+
+def t13_channel_rotation():
+    """11-26 用戶裁定：比照 TFF 每 100 集開新頻。帳本滿額→建新頻＋封面＋分組＋登記簿＋CHFILE。"""
+    import tempfile, os as _os, json as _j
+    ob = _load_ob()
+    ob.time.sleep = lambda *_: None
+    ob._last_req[0] = 0.0
+    _d = tempfile.mkdtemp()
+    old_chf, old_obchs, old_binds = ob.CHFILE, ob.OBCHS, ob.BINDS
+    ob.CHFILE = _os.path.join(_d, "ob_channel.json")
+    ob.OBCHS = _os.path.join(_d, "ob_channels.json")
+    ob.BINDS = _os.path.join(_d, "ob_binds.json")
+    ob.wj(ob.CHFILE, {"cid": "ch0", "name": "On Being 001-100"})
+    created = []
+
+    def fake(m, u, **kw):
+        if "CreatePrivateChannel" in u and "itemtype=7" not in u:
+            created.append(kw.get("data", {}).get("name", ""))
+            return _RR('{"success":true}')
+        if "GetPrivateChannels" in u:
+            lst = [{"Id": "ch0", "Name": "On Being 001-100", "ChannelType": "",
+                    "Thumb": "x", "Description": "d"}]
+            lst += [{"Id": f"ch{len(created)}", "Name": n, "ChannelType": "",
+                     "Thumb": "", "Description": ""} for n in created]
+            return _RR({"channelList": {"UploadedChannels": lst}})
+        return _RR('{"success":true}')
+
+    ob.req = fake
+    ob._banned_check = lambda s: False
+    ob.ensure_channel_cover = lambda cid, name: None
+    ob.ensure_ob_group = lambda cid: None
+    ob.ntfy = lambda *a, **k: None
+    try:
+        ledger = {f"guid{i}": {"title": "t"} for i in range(100)}
+        ncid = ob.maybe_rotate("ch0", ledger)
+        assert ncid != "ch0", "滿 100 集應開新頻"
+        reg = ob.rj(ob.OBCHS, [])
+        assert len(reg) == 2 and reg[1]["lo"] == 101 and reg[1]["hi"] == 200, "登記簿區段錯"
+        assert "101-200" in reg[1]["name"], "命名應含區段"
+        assert ob.rj(ob.CHFILE, {}).get("cid") == ncid, "CHFILE 應切到新頻"
+        # 冪等：同狀態再叫不重複建
+        created.clear()
+        assert ob.maybe_rotate(ncid, ledger) == ncid
+        assert not created, "不應重複建頻"
+        # 未滿額不動作
+        assert ob.maybe_rotate(ncid, {**ledger, "gx": {}}) == ncid
+        print("  rotate: 頻道 #2 建立 On Being 001-100 → 101-200 ✓")
+    finally:
+        ob.CHFILE, ob.OBCHS, ob.BINDS = old_chf, old_obchs, old_binds
+        ob.req = ob._orig_req
 
 
 def t9_engine_kit():
@@ -413,6 +468,7 @@ if __name__ == "__main__":
     check("T10 封面 SOP（政策表＋孤兒防線）", t10_covers_sop)
     check("T11 頻道封面補設（ob 間責修復）", t11_channel_cover)
     check("T12 各集封面政策（per-ep 快取＋fallback）", t12_episode_thumb_policy)
+    check("T13 頻道容量輪轉（100 集/頻，滿額自動開新頻）", t13_channel_rotation)
     if FAIL:
         print(f"preflight FAIL: {FAIL} —— 部署禁行")
         sys.exit(1)

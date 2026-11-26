@@ -33,6 +33,9 @@ LEDGER = os.path.join(TRAIL, "done_ob.json")
 PIT = os.path.join(TRAIL, "ob-pit.json")
 CHFILE = os.path.join(TRAIL, "ob_channel.json")
 PARTS = os.path.join(TRAIL, "ob_parts.jsonl")
+OBCHS = os.path.join(TRAIL, "ob_channels.json")   # 頻道登記簿（dedup 跨 repo 讀取）
+BINDS = os.path.join(TRAIL, "ob_binds.json")      # 已綁分組的 cid 集合
+CH_CAP = int(os.environ.get("OB_CHANNEL_CAPACITY", "100"))
 
 
 def parts_marked():
@@ -524,6 +527,15 @@ def ensure_ob_group(cid):
               .get("channelList", {}).get("UploadedChannels", []))
         grp = next((c for c in gl if c.get("Name") == OB_GROUP), None)
         if not grp:
+            # 11-26 用戶已自行改名分組——名稱找不到時，僅剩的一個非 TFF/HTF/Bulwark
+            # 分組視為 OB 分組（ob_face_maint 偵查同款啟發法）。
+            unk = [c for c in gl
+                   if not any((c.get("Id") or "").startswith(p)
+                              for p in ("9007fbda", "de9abbba", "87c5aed8"))]
+            if len(unk) == 1:
+                grp = unk[0]
+                log(f"  group by-elimination: {grp.get('Name')!r}")
+        if not grp:
             r = req("POST", f"{BASE}/ting/CreatePrivateChannel?itemtype=7",
                     data={"name": OB_GROUP, "thumb": "", "channelType": "2",
                           "description": "On Being with Krista Tippett 全集搬運分組"}, timeout=40)
@@ -536,12 +548,16 @@ def ensure_ob_group(cid):
                 log("  group create failed — skip (retry next run)")
                 return
         gid = grp["Id"]
-        if (grp.get("TotalMediaCount") or 0) >= 1:
-            log(f"  group bind: already bound ({grp.get('TotalMediaCount')}) — skip")
+        binds = set(rj(BINDS, []) or [])
+        if cid in binds:
+            log("  group bind: 已綁（binds 記錄）— skip")
             return
         r = req("POST", f"{BASE}/ting/AddChannelsToPrivateGroup",
                 data=[("groupId", gid), ("channelIds", cid)], timeout=60)
         log(f"  group bind: {r.status_code} {(r.text or '')[:60]}")
+        if r.status_code == 200:
+            binds.add(cid)
+            wj(BINDS, sorted(binds))
     except Exception as ex:
         log(f"  group err（非致命）: {str(ex)[:80]}")
 
@@ -593,9 +609,65 @@ def ensure_channel_cover(cid, name):
         log(f"channel cover err（非致命）: {str(ex)[:80]}")
 
 
+def _ch_base_name():
+    """頻道命名基底＝現在的頻道名剝掉既有「001-100」區段後綴（用戶改名後跟隨）。"""
+    saved = rj(CHFILE, {}) or {}
+    nm = saved.get("name") or "On Being"
+    return re.sub(r"\s*\d{3}-\d{3}\s*$", "", nm).strip() or nm
+
+
+def maybe_rotate(cid, ledger):
+    """頻道容量輪轉（11-26 用戶裁定：比照 TFF 每 100 集開新頻，之後隨更新續開）。
+    n_done=帳本數（heal＋backfill 全計）→ 目標頻道序 = n_done // CH_CAP；
+    當前序落後才補建（冪等；一次建到目標序）。新頻自動：封面＋分組＋登記簿。"""
+    try:
+        n_done = len(ledger)
+        idx_tgt = n_done // CH_CAP
+        reg = rj(OBCHS, []) or []
+        idx_cur = next((i for i, r in enumerate(reg) if r.get("cid") == cid), None)
+        if idx_cur is None:                       # 首頻未登記 → 補登記
+            reg = [{"cid": cid, "name": (rj(CHFILE, {}) or {}).get("name") or "On Being",
+                    "lo": 1, "hi": CH_CAP, "at": time.strftime("%F %T")}]
+            wj(OBCHS, reg)
+            idx_cur = 0
+        if idx_tgt <= idx_cur:
+            return cid
+        for idx in range(idx_cur + 1, idx_tgt + 1):
+            lo, hi = idx * CH_CAP + 1, (idx + 1) * CH_CAP
+            nm = f"{_ch_base_name()} {lo:03d}-{hi:03d}"
+            if _banned_check(nm):
+                nm = f"{_ch_base_name()}-{lo:03d}-{hi:03d}"      # 過審變體
+            r = req("POST", f"{BASE}/ting/CreatePrivateChannel",
+                    data={"name": nm, "thumb": "", "channelType": "",
+                          "description": CH_DESC}, timeout=45)
+            if not (r.status_code == 200
+                    and '"success":true' in (r.text or "").replace(" ", "")):
+                log(f"rotate: create fail {r.status_code} {(r.text or '')[:60]}")
+                return cid
+            have = {html.unescape(c.get("Name") or ""): c["Id"]
+                    for c in (req("GET", f"{BASE}/ting/GetPrivateChannels", timeout=45)
+                              .json().get("channelList", {})
+                              .get("UploadedChannels") or [])}
+            if nm not in have:
+                log(f"rotate: created but not listed: {nm}")
+                return cid
+            ncid = have[nm]
+            log(f"rotate: 頻道 #{idx + 1} 建立 {nm} → {ncid}")
+            ensure_channel_cover(ncid, nm)
+            ensure_ob_group(ncid)
+            reg.append({"cid": ncid, "name": nm, "lo": lo, "hi": hi,
+                        "at": time.strftime("%F %T")})
+            wj(OBCHS, reg)
+            wj(CHFILE, {"cid": ncid, "name": nm, "at": time.strftime("%F %T")})
+            cid = ncid
+            ntfy("On Being 開新頻", f"{nm}（第 {lo}-{hi} 集）已建立＋封面＋分組。", 2)
+        return cid
+    except Exception as ex:
+        log(f"rotate err（非致命）: {str(ex)[:80]}")
+        return cid
+
+
 _EPART = {}                                # per-ep 插畫快取（URL→fid；多分片共用一次上傳）
-
-
 def ep_thumb_fid(e, fallback_img):
     """各集封面（11-26 用戶要求）：per-item RSS 插畫→上傳（URL 快取）；無→沿用頻道封面。"""
     u = e.get("img") or ""
@@ -663,7 +735,12 @@ def main():
     catalog = [e for e in items if e["url"]]
     dead = len(items) - len(catalog)
     ledger = rj(LEDGER, {}) or {}
-    have = have_titles(cid)
+    have = set()                             # 跨頻道並集（輪轉後 dedup-skip 仍有效）
+    for _r in [x for x in (rj(OBCHS, []) or []) if x.get("cid")] + [{"cid": cid}]:
+        try:
+            have |= have_titles(_r["cid"])
+        except Exception:
+            pass
     healed = 0
     for e in catalog:
         key = norm(f'{e["date"].strftime("%F")} {e["title"]}')
@@ -676,6 +753,10 @@ def main():
     if healed:
         wj(LEDGER, ledger)
         log(f"heal: +{healed} ledger entries (頻道既有)")
+    _pre = cid
+    cid = maybe_rotate(cid, ledger)          # 容量輪轉（滿 100 開新頻；11-26 用戶裁定）
+    if cid != _pre:
+        cover = channel_cover_bytes(cid)     # fallback 用 logo——重抓（同 feed logo，保險）
     emit_pit(ledger, catalog, dead)
     if BACKFILL:
         pool = [e for e in catalog if e["guid"] and e["guid"] not in ledger]
@@ -753,6 +834,7 @@ def main():
                     wj(LEDGER, ledger)        # kill-safe：每集成功即落帳
                     if BACKFILL:
                         _git_progress()       # per-ep 進度落 git（跨 run 存活）
+                    cid = maybe_rotate(cid, ledger)   # 滿額即開新頻（下集進新頻）
             else:
                 failed.append(full[:50])
         except Exception as ex:

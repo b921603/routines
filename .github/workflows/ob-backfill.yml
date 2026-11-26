@@ -2,7 +2,8 @@ name: ob-backfill
 
 on:
   schedule:
-    - cron: "17 2 * * 2,4,6"   # 週二/四/六 10:17 台北 · On Being 全集 drain（錯峰）
+    # 11-26 用戶裁定「敢死隊式補齊」：drain 每 3h 一班（8 班/日×12 集=96/日 → 986 集 ~10 天補完）
+    - cron: "30 1,4,7,10,13,16,19,22 * * *"
   workflow_dispatch:
 
 permissions:
@@ -60,7 +61,8 @@ jobs:
         run: |
           git config user.name "ob-bot"
           git config user.email "b921603@users.noreply.github.com"
-          git add trail/ob_channel.json trail/done_ob.json trail/ob-pit.json 2>/dev/null || true
+          git add trail/ob_channel.json trail/done_ob.json trail/ob-pit.json \
+                  trail/ob_channels.json trail/ob_binds.json trail/ob_parts.jsonl 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "ob trail: run ${{ github.run_id }} [skip ci]"
             git pull --rebase origin main || true
