@@ -32,6 +32,54 @@ TRAIL = os.path.join(_REPO, "trail")
 LEDGER = os.path.join(TRAIL, "done_ob.json")
 PIT = os.path.join(TRAIL, "ob-pit.json")
 CHFILE = os.path.join(TRAIL, "ob_channel.json")
+PARTS = os.path.join(TRAIL, "ob_parts.jsonl")
+
+
+def parts_marked():
+    """已建立分片 resume 錨點 {(guid, part)}——kill-safe（tfs parts_ledger_mark 繼承）。"""
+    out = set()
+    try:
+        with open(PARTS, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    j = json.loads(line)
+                    out.add((j["guid"], j["part"]))
+                except Exception:
+                    pass
+    except FileNotFoundError:
+        pass
+    return out
+
+
+def parts_mark(guid, part, title, cid, mid):
+    """單分片建立即記（mid 入帳＝dedup 正主錨點；隨增量 commit 落 git 跨 run 存活）。"""
+    with open(PARTS, "a", encoding="utf-8") as f:
+        f.write(json.dumps({"ts": time.strftime("%F %T"), "guid": guid, "part": part,
+                            "title": title[:80], "cid": cid, "mid": mid},
+                           ensure_ascii=False) + "\n")
+
+
+def _git_progress():
+    """增量 commit：每集進度即落 git（tfs git-as-queue 的 ob 版本——kill 後任何 runner 都看得到）。"""
+    try:
+        subprocess.run(["git", "add", "trail/done_ob.json", "trail/ob_parts.jsonl"],
+                       check=False, capture_output=True, timeout=30)
+        if subprocess.run(["git", "diff", "--cached", "--quiet"],
+                          capture_output=True).returncode != 0:
+            subprocess.run(["git", "commit", "-q", "-m",
+                            f"ob progress: {time.strftime('%H:%M:%S')}"], check=False,
+                           capture_output=True, timeout=60)
+            r = subprocess.run(["git", "pull", "--rebase", "-q"], capture_output=True, timeout=90)
+            if r.returncode == 0:
+                subprocess.run(["git", "push", "-q", "origin", "main"],
+                               capture_output=True, timeout=90)
+            else:
+                subprocess.run(["git", "rebase", "--abort"], capture_output=True, timeout=30)
+                log("  progress commit: rebase conflict — 本地保留（trail step 末再 push）")
+    except Exception as ex:
+        log(f"  progress commit err: {str(ex)[:60]}")
+
+
 AUD = os.path.join(_REPO, "state", "ob_audio")
 
 SES = requests.Session()
@@ -455,6 +503,41 @@ def post(cid, title, thumb_fid, media_fid, desc, ai_sub=True):
     return False
 
 
+OB_GROUP = os.environ.get("OB_GROUP_NAME", "On Being")
+
+
+def ensure_ob_group(cid):
+    """tfs ensure_group 繼承（繼承審計缺口 F，11-26 用戶點名）：ob 頻道綁進分組。
+    Eudic 分組＝ChannelType-2 頻道實體（CreatePrivateChannel?itemtype=7 →
+    AddChannelsToPrivateGroup{groupId,channelIds}）。只在缺綁時 POST（重綁會重排）。"""
+    try:
+        gl = (req("POST", f"{BASE}/ting/GetPrivateGroups?withDefault=false",
+                  data="", timeout=40).json()
+              .get("channelList", {}).get("UploadedChannels", []))
+        grp = next((c for c in gl if c.get("Name") == OB_GROUP), None)
+        if not grp:
+            r = req("POST", f"{BASE}/ting/CreatePrivateChannel?itemtype=7",
+                    data={"name": OB_GROUP, "thumb": "", "channelType": "2",
+                          "description": "On Being with Krista Tippett 全集搬運分組"}, timeout=40)
+            log(f"  group create: {r.status_code} {(r.text or '')[:60]}")
+            gl = (req("POST", f"{BASE}/ting/GetPrivateGroups?withDefault=false",
+                      data="", timeout=40).json()
+                  .get("channelList", {}).get("UploadedChannels", []))
+            grp = next((c for c in gl if c.get("Name") == OB_GROUP), None)
+            if not grp:
+                log("  group create failed — skip (retry next run)")
+                return
+        gid = grp["Id"]
+        if (grp.get("TotalMediaCount") or 0) >= 1:
+            log(f"  group bind: already bound ({grp.get('TotalMediaCount')}) — skip")
+            return
+        r = req("POST", f"{BASE}/ting/AddChannelsToPrivateGroup",
+                data=[("groupId", gid), ("channelIds", cid)], timeout=60)
+        log(f"  group bind: {r.status_code} {(r.text or '')[:60]}")
+    except Exception as ex:
+        log(f"  group err（非致命）: {str(ex)[:80]}")
+
+
 def audit(cid):
     nb = nc = 0
     try:
@@ -497,6 +580,7 @@ def emit_pit(ledger, catalog, dead):
 def main():
     login()
     cid = channel_id()
+    ensure_ob_group(cid)
     cover = channel_cover_bytes(cid)
     items = rss_items()
     catalog = [e for e in items if e["url"]]
@@ -536,6 +620,7 @@ def main():
              f"\n頻道首頁 {nb} 篇、缺封面 {nc}。", 1)
         return
     synced, failed = 0, []
+    marked = parts_marked()
     for e in todo:
         key = e["date"].strftime("%Y%m%d")
         full = f'{e["date"].strftime("%F")} {e["title"]}'
@@ -543,9 +628,10 @@ def main():
         try:
             parts = prep_audio(e["url"], key)
             ok_all = True
+            ep_mids = []
             for pf, i, n in parts:
                 ptitle = full if n == 1 else f"{full}（{i}/{n}）"
-                if norm(ptitle) in have:
+                if norm(ptitle) in have or (e["guid"], i) in marked:
                     continue
                 fid = thumb_fid(cover)
                 media_fid = upload_media(pf)
@@ -575,14 +661,21 @@ def main():
                     ok_all = False
                     break
                 have.add(norm(ptitle))
+                if e["guid"]:
+                    parts_mark(e["guid"], i, full, cid, media_fid)
+                    marked.add((e["guid"], i))
+                ep_mids.append(media_fid)
                 time.sleep(3)
             if ok_all:
                 synced += 1
                 if e["guid"]:
                     ledger[e["guid"]] = {"title": full, "pub": e["date"].strftime("%F"),
                                          "at": time.strftime("%F %T"),
-                                         "how": "backfill" if BACKFILL else "daily"}
+                                         "how": "backfill" if BACKFILL else "daily",
+                                         "mids": ep_mids}   # dedup 正主錨點
                     wj(LEDGER, ledger)        # kill-safe：每集成功即落帳
+                    if BACKFILL:
+                        _git_progress()       # per-ep 進度落 git（跨 run 存活）
             else:
                 failed.append(full[:50])
         except Exception as ex:

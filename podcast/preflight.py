@@ -213,6 +213,41 @@ def t7_thumb_cache():
     ob.req = ob._orig_req                      # 測試隔離
 
 
+def t8_group_and_parts():
+    """缺口 F/G：分組綁定（itemtype=7 → AddChannelsToPrivateGroup）＋per-part ledger。"""
+    ob = _load_ob()
+    ob.time.sleep = lambda *_: None
+    ob._last_req[0] = 0.0
+    hits = []
+
+    def fake(m, u, **kw):
+        hits.append(u)
+        import json as _j
+        if "GetPrivateGroups" in u:
+            return _RR({"channelList": {"UploadedChannels": []}} if len(hits) < 3
+                       else {"channelList": {"UploadedChannels": [
+                           {"Id": "gid-1", "Name": "On Being", "TotalMediaCount": 0}]}})
+        if "CreatePrivateChannel" in u and "itemtype=7" in u:
+            return _RR('{"success":true}')
+        if "AddChannelsToPrivateGroup" in u:
+            return _RR('{"success":true}')
+        return _RR("{}")
+
+    ob.req = fake
+    ob.ensure_ob_group("ob-cid-1")
+    assert any("itemtype=7" in u for u in hits), "應建分組（itemtype=7）"
+    assert any("AddChannelsToPrivateGroup" in u for u in hits), "應綁定頻道"
+    # per-part：mark→load roundtrip＋resume 語義
+    import tempfile, os as _os
+    old_parts = ob.PARTS
+    ob.PARTS = _os.path.join(tempfile.mkdtemp(), "ob_parts.jsonl")
+    ob.parts_mark("g-1", 2, "t", "c", "mid-9")
+    assert ("g-1", 2) in ob.parts_marked()
+    assert ("g-1", 1) not in ob.parts_marked()
+    ob.PARTS = old_parts
+    ob.req = ob._orig_req
+
+
 def t4_workflow_structure():
     for wf in ("ob-backfill.yml", "ob-daily.yml", "patrol.yml"):
         p = os.path.join(WROOT, ".github", "workflows", wf)
@@ -235,6 +270,7 @@ if __name__ == "__main__":
     check("T5 上傳端點兩步式（iter-7 根因）", t5_upload_endpoint)
     check("T6 auth 防護＋GAP 節流（繼承審計 A/B）", t6_auth_guard)
     check("T7 thumb 快取單次上傳（繼承審計 C）", t7_thumb_cache)
+    check("T8 分組綁定＋per-part ledger（缺口 F/G）", t8_group_and_parts)
     if FAIL:
         print(f"preflight FAIL: {FAIL} —— 部署禁行")
         sys.exit(1)
