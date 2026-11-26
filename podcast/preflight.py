@@ -12,7 +12,7 @@
 零網路：所有平台呼叫被 monkeypatch。dispatch 前必跑；GA 端為 backfill 前置 step。
 退出碼 0=全部通過；非 0=部署禁行。
 """
-import os, sys, time, types, py_compile, yaml
+import os, sys, json, time, types, py_compile, yaml
 
 WROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FAIL = []
