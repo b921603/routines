@@ -87,18 +87,42 @@ def ntfy(title, body, prio=3):
         log(f"ntfy err: {str(ex)[:60]}")
 
 
-def req(method, url, *, data=None, timeout=60, tries=6, headers=None, files=None):
+class AuthError(Exception):
+    """Cookie 失效（302/401 或被導向登入頁）——tfs 繼承審計缺口 A（11-26）。
+    若無此防護：cookie 中途死→have_titles 回空→全部誤判未搬運→大規模重複上傳。"""
+
+
+GAP = 2.4                         # 全局請求最小間隔（tfs 繼承審計缺口 B：WAF 節流）
+_last_req = [0.0]
+_RELOGIN = [0]                    # mid-run relogin 次數（上限 1/run）
+
+
+def req(method, url, *, data=None, timeout=60, tries=6, headers=None, files=None,
+        auth_check=True):
+    """Rate-gated（GAP 全局節流）＋auth 偵測（302/401／登入頁→AuthError，不重試直接上拋）。"""
     kw = {}
     if headers:
         kw["headers"] = headers
     if files:
         kw["files"] = files
     for k in range(tries):
+        wait = _last_req[0] + GAP - time.time()
+        if wait > 0:
+            time.sleep(wait + 0.15)
+        _last_req[0] = time.time()
         try:
             r = SES.request(method, url, data=data, timeout=timeout, **kw)
+            if auth_check and r.status_code in (302, 401):
+                raise AuthError(f"HTTP {r.status_code} — cookie expired?")
+            if (auth_check and r.status_code == 200
+                    and "EudicWebSession" in (r.text or "")[:4000]
+                    and "uploadprivatemedia" not in url):
+                raise AuthError("redirected to login — cookie expired?")
             if r.status_code in (429, 502, 503):
                 raise IOError(f"HTTP {r.status_code}")
             return r
+        except AuthError:
+            raise
         except Exception as ex:
             log(f"  http retry{k}: {str(ex)[:80]}")
             time.sleep(6 + 6 * k)
@@ -265,7 +289,7 @@ def channel_id(force=False):
 
 def have_titles(cid):
     out = set()
-    for pg in range(3):
+    for pg in range(50):      # 3 頁上限會讓 dup 防線對舊集失效（tfs 繼承審計缺口 E）
         r = req("GET", f"{BASE}/ting/GetPrivateMedias?sortby=0&page={pg}&channelId={cid}",
                 timeout=45)
         got = 0
@@ -314,10 +338,24 @@ def upload_thumb(img):
                 return j.get("fileId") or j.get("result").split("/")[-1]
             busy = "处理程序" in (r.text or "") or "还在处理" in (r.text or "")
             log(f"  thumb try{i}: {(r.text or '')[:90]}")
+        except AuthError:
+            raise
         except Exception as ex:
             log(f"  thumb try{i} err: {str(ex)[:70]}")
         time.sleep(45 if busy else min(3 + 3 * i, 18))
     return None
+
+
+_THUMB = {"fid": ""}
+
+
+def thumb_fid(img):
+    """頻道封面每 run 只上傳一次（tfs 72h-cache 的 per-run 版）——逐集重傳＝浪費＋孤兒 thumb 檔。"""
+    if not img:
+        return ""
+    if not _THUMB["fid"]:
+        _THUMB["fid"] = upload_thumb(img) or ""
+    return _THUMB["fid"]
 
 
 def upload_media(path):
@@ -336,6 +374,8 @@ def upload_media(path):
                 return j.get("fileId") or j.get("result").split("/")[-1]
             busy = "处理程序" in (r.text or "") or "还在处理" in (r.text or "")
             log(f"  upload try{i}: {(r.text or '')[:90]}")
+        except AuthError:
+            raise
         except Exception as ex:
             log(f"  upload try{i} err: {str(ex)[:70]}")
         time.sleep(45 if busy else min(3 + 3 * i, 18))
@@ -407,6 +447,8 @@ def post(cid, title, thumb_fid, media_fid, desc, ai_sub=True):
                 continue
             log(f"  post try{k}: {r.status_code} {txt[:80]}")
             time.sleep(8)
+        except AuthError:
+            raise
         except Exception as ex:
             log(f"  post try{k} err: {str(ex)[:80]}")
             time.sleep(8)
@@ -505,7 +547,7 @@ def main():
                 ptitle = full if n == 1 else f"{full}（{i}/{n}）"
                 if norm(ptitle) in have:
                     continue
-                fid = upload_thumb(cover) if cover else ""
+                fid = thumb_fid(cover)
                 media_fid = upload_media(pf)
                 if not media_fid:            # 上傳耗盡→本集失敗下輪續傳（TFF 同款；免雙層重試拖爆輪預算）
                     raise RuntimeError("media upload failed (UploadTingFile exhausted)")
@@ -545,6 +587,13 @@ def main():
                 failed.append(full[:50])
         except Exception as ex:
             log(f"  ✗ {str(ex)[:110]}")
+            if isinstance(ex, AuthError) and not _RELOGIN[0]:
+                _RELOGIN[0] = 1       # tfs auto_relogin 繼承：首次 AuthError→密碼重登，後續集正常
+                try:
+                    login()
+                    log("  ↻ mid-run relogin OK——後續集正常；本集下輪續傳")
+                except Exception as le:
+                    log(f"  relogin err: {str(le)[:60]}")
             failed.append(full[:50])
     pit = emit_pit(ledger, catalog, dead)
     nb, nc = audit(cid)

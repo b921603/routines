@@ -46,6 +46,8 @@ def _load_ob():
     os.environ.setdefault("SVC_PASS", "dummy")
     sys.path.insert(0, os.path.join(WROOT, "podcast"))
     import ob_update
+    if not hasattr(ob_update, "_orig_req"):
+        ob_update._orig_req = ob_update.req
     return ob_update
 
 
@@ -159,6 +161,56 @@ def t5_upload_endpoint():
     assert any("UploadTingFile" in u for u in hits), hits
     assert not any(u.rstrip("/").endswith("/ting/uploadprivatemedia") for u in hits), \
         "禁止 multipart 直砸 uploadprivatemedia（11-25 根因）"
+    ob.req = ob._orig_req                      # 測試隔離：還原 pristine req
+
+
+def t6_auth_guard():
+    """tfs 繼承審計缺口 A：302/401/登入頁→AuthError（防 cookie 死後大規模重複上傳）。"""
+    ob = _load_ob()
+    ob.req = ob._orig_req                      # 測試隔離（T5 可能換過）
+    ob.time.sleep = lambda *_: None
+    ob._last_req[0] = 0.0
+
+    class _Ses:
+        def __init__(self, code, body):
+            self.code, self.body = code, body
+
+        def request(self, method, url, data=None, timeout=None, **kw):
+            return _RR(self.body, self.code)
+
+    for code, body in ((302, "<html>redirect</html>"), (401, "unauthorized"),
+                       (200, "<html>EudicWebSession login page</html>")):
+        ob.SES = _Ses(code, body)
+        try:
+            ob.req("GET", "https://my.eudic.net/ting/GetPrivateChannels", timeout=5)
+            raise AssertionError(f"{code}/{body[:20]} 應拋 AuthError")
+        except ob.AuthError:
+            pass
+    ob.SES = _Ses(200, '{"channelList": {"UploadedChannels": []}}')
+    r = ob.req("GET", "https://my.eudic.net/ting/GetPrivateChannels", timeout=5)
+    assert r.status_code == 200
+    assert ob.GAP == 2.4, ob.GAP
+
+
+def t7_thumb_cache():
+    """缺口 C：thumb_fid() 每 run 只上傳一次封面（舊版逐集重傳 12×＝浪費＋孤兒 thumb）。"""
+    ob = _load_ob()
+    ob.time.sleep = lambda *_: None
+    ob._THUMB["fid"] = ""
+    n = {"c": 0}
+
+    def fake(m, u, **kw):
+        n["c"] += 1
+        assert "UploadTingFile" in u
+        return _RR(json.dumps({"success": True, "fileId": "thumb-fid-1"}))
+
+    ob.req = fake
+    a = ob.thumb_fid(b"img-bytes")
+    b_ = ob.thumb_fid(b"img-bytes")
+    assert a == b_ == "thumb-fid-1" and n["c"] == 1, (a, b_, n["c"])
+    assert ob.thumb_fid(None) == ""
+    ob._THUMB["fid"] = ""
+    ob.req = ob._orig_req                      # 測試隔離
 
 
 def t4_workflow_structure():
@@ -181,6 +233,8 @@ if __name__ == "__main__":
     check("T3 上傳退避重試（首航 500 風暴）", t3_retry_backoff)
     check("T4 workflow 結構衛生", t4_workflow_structure)
     check("T5 上傳端點兩步式（iter-7 根因）", t5_upload_endpoint)
+    check("T6 auth 防護＋GAP 節流（繼承審計 A/B）", t6_auth_guard)
+    check("T7 thumb 快取單次上傳（繼承審計 C）", t7_thumb_cache)
     if FAIL:
         print(f"preflight FAIL: {FAIL} —— 部署禁行")
         sys.exit(1)
