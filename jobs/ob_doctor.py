@@ -171,7 +171,23 @@ def main():
         if FIX and nc:
             FM.patch_zombie_thumbs(cid)
 
-    # ── 判定 ──
+    # ── 判定（修復後重取現況——rep 是修復前快照，直接算會誤報）──
+    if FIX:
+        chs = get_chs()
+        rep["channels"] = [{"cid": c.get("Id"), "name": c.get("Name"),
+                            "thumb": shape(c.get("Thumb"))}
+                           for c in chs if c.get("Id") in cids]
+        grps2 = get_grps()
+        rep["groups"] = [{"name": g.get("Name"),
+                          "tag": CURATED.get((g.get("Id") or "")[:8], "OB"),
+                          "thumb": shape(g.get("Thumb"))}
+                         for g in grps
+                         if (g.get("Id") or "")[:8] in CURATED
+                         or "being" in (g.get("Name") or "").lower()]
+        rep["episodes"] = []
+        for cid in cids:
+            nb, nc = OB.audit(cid)
+            rep["episodes"].append({"cid": cid, "page0": nb, "bare": nc})
     bad_ch = [c for c in rep["channels"] if c.get("thumb") in ("empty", "default")]
     bad_gp = [g for g in rep["groups"] if g.get("thumb") in ("empty", "default")]
     bare = sum(e.get("bare", 0) for e in rep["episodes"])
