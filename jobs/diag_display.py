@@ -85,52 +85,67 @@ def main():
     log(f"殼 {len(shell)}B｜線索 {len(clues)} 條：")
     for c in sorted(clues)[:20]:
         log(f"    {c[:88]}")
-    # 優先猜測：管理清單＝GetPrivateMedias dragBox 本體（dragList.js 共用渲染）
-    r = OB.req("GET", f"{OB.BASE}/ting/GetPrivateMedias?sortby=0&page=0&channelId={cid}",
-               timeout=45)
-    if "未顯示" in (r.text or ""):
-        log("★ GetPrivateMedias dragBox 內含狀態字！")
-        boxes = re.split(r'<div class="dragBox">', r.text or "")[1:]
-        log(f"dragBox {len(boxes)} 個；首盒全文：")
-        log(boxes[0][:1600])
-        rows = parse_rows(r.text)
-        hidden = [t for t, s in rows if s == "未顯示"]
-        normal = [t for t, s in rows if s == "正常"]
-        log(f"列 {len(rows)}：未顯示 {len(hidden)}｜正常 {len(normal)}")
-        led = OB.rj(OB.LEDGER, {}) or {}
-
-        def how_of(t):
-            for v in led.values():
-                tt = v.get("title", "")
-                if tt and t.lower().startswith(tt.lower()[:20]):
-                    return v.get("how")
-            return "?"
-
-        for t, s in rows[:20]:
-            log(f"  [{s}] ({how_of(t)}) {t[:56]}")
-
-        def find_mid(title):
-            for x in boxes:
-                tm = re.search(r'rl-title"[^>]*title="([^"]*)"', x)
-                mid = re.search(r'media_id"[^>]*data="([^"]+)"', x)
-                if tm and mid and html.unescape(tm.group(1)).strip() == title.strip():
-                    return mid.group(1)
-            return None
-
-        for tag, pool in (("未顯示", hidden), ("正常", normal)):
-            if not pool:
-                continue
-            title = pool[0]
-            mid = find_mid(title)
-            log(f"── 樣本[{tag}] mid={mid} {title[:50]}")
-            if not mid:
-                continue
-            f = edit_fields(cid, mid)
+    # ── 主偵查：頻道清單 vs 審核假說 ──
+    boxes = []
+    for pg in range(2):
+        r = OB.req("GET", f"{OB.BASE}/ting/GetPrivateMedias?sortby=0&page={pg}&channelId={cid}",
+                   timeout=45)
+        boxes += re.split(r'<div class="dragBox">', r.text or "")[1:]
+    log(f"頻道清單 dragBox 共 {len(boxes)} 盒")
+    suspects = ["Surviving the Religion of Mao", "Gay", "[Unedited]",
+                "Cloning", "Laurie Zoloth"]
+    log("── 截圖中『未顯示』樣本是否在頻道清單？──")
+    for s_ in suspects:
+        hit = next((x for x in boxes if s_.lower() in html.unescape(
+            (re.search(r'rl-title"[^>]*title="([^"]*)"', x) or re.match(r"$^","")).group(1)).lower()
+            if re.search(r'rl-title"', x)), None)
+        if hit is not None and s_ == "[Unedited]":
+            tm = re.search(r'rl-title"[^>]*title="([^"]*)"', hit)
+            log(f"  {s_!r}: 有（{html.unescape(tm.group(1))[:44] if tm else '?'})")
+        elif hit is not None:
+            tm = re.search(r'rl-title"[^>]*title="([^"]*)"', hit)
+            log(f"  {s_!r}: 有（{html.unescape(tm.group(1))[:44] if tm else '?'}）")
+        else:
+            log(f"  {s_!r}: ✗ 不在頻道清單")
+    log("── 首盒完整標記（找 hidden/audit/isShow 痕跡）──")
+    if boxes:
+        b0 = boxes[0]
+        b0s = re.sub(r"\s+", " ", b0)
+        for kw in ("hide", "audit", "isShow", "isshow", "display", "未顯示", "正常", "no-cover"):
+            if kw.lower() in b0s.lower():
+                i = b0s.lower().index(kw.lower())
+                log(f"  {kw!r} @ …{b0s[max(0,i-120):i+160]}…")
+        log(f"  首盒 400B: {b0s[:400]}")
+    # 截圖比對：用 led 統計上傳時間窗
+    log("── JS 轉義字串與 ajax url ──")
+    for u in sorted(clues):
+        if not u.endswith(".js"):
+            continue
+        url = u if u.startswith("http") else f"{OB.BASE}{u}"
+        try:
+            j = OB.retry(lambda: OB.requests.get(url, headers=OB.UA, timeout=60))
+            js = j.text or ""
+            for esc in ("\\u672a\\u663e\\u793a", "未顯示", "GetPrivateMedias", "GetMediaList"):
+                if esc.lower() in js.lower():
+                    i = js.lower().index(esc.lower())
+                    log(f"  ★ {u[:40]} 含 {esc!r} @ …{js[max(0,i-200):i+240]}…")
+                    break
+        except Exception as ex:
+            log(f"  js err {str(ex)[:50]}")
+    # 編輯頁樣本：找一個 Mao 標題（若在清單）
+    tgt = next((x for x in boxes if "mao" in x.lower()), None)
+    if tgt:
+        tm = re.search(r'rl-title"[^>]*title="([^"]*)"', tgt)
+        mid = re.search(r'media_id"[^>]*data="([^"]+)"', tgt)
+        if tm and mid:
+            log(f"── 編輯頁欄位（未顯示樣本：{html.unescape(tm.group(1))[:44]}）──")
+            f = edit_fields(cid, mid.group(1))
             for k in sorted(f):
                 log(f"    {k} = {f[k]!r}")
-        log("=== 偵查完畢 ===")
-        return
-    log("dragBox 無狀態字——退回端點探險")
+    log("=== 偵查完畢 ===")
+    return
+    method, path, body = probe_endpoints()  # noqa: 保留參考
+    if not body:
     method, path, body = probe_endpoints()
     if not body:
         log("!! 常見端點都沒中——下一步：抓殼引用的 JS 檔找真正的 XHR 路徑")
