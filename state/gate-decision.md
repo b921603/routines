@@ -1,4 +1,4 @@
-# Gate 決策過程 2026-11-26 03:42:42
+# Gate 決策過程 2026-11-27 03:49:34
 
 **裁定：⌛ HOLD** ｜ 連綠 streak 0/7 ｜ WIP 3/4 ｜ 月預算 0/1
 
@@ -6,7 +6,7 @@
 - **tff**: ⌛ 未穩 — engine completion 1.001 （缺 0｜lag —）｜streak 0/7
 - **htf**: ⌛ 未穩 — engine completion 1.0 （缺 0｜lag -0.1d）｜streak 0/7
 - **bulwark**: ✅ steady — paused（用戶裁示 11-25）——不計入補完條件
-- **ob**: ⌛ 未穩 — completion None（本地估算）｜streak 0/7
+- **ob**: ⌛ 未穩 — engine completion 0.022 （缺 964｜lag 8317.2d）｜streak 0/7
 
 ## 2. 合格候選（fresh＋非 major＋非 avoid＋活躍）Top5
 
