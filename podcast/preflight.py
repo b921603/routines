@@ -235,10 +235,10 @@ def t8_group_and_parts():
         return _RR("{}")
 
     ob.req = fake
-    ob.ensure_ob_group("ob-cid-1")
-    assert any("itemtype=7" in u for u in hits), "應建分組（itemtype=7）"
-    assert any("AddChannelsToPrivateGroup" in u for u in hits), "應綁定頻道"
-    # per-part：mark→load roundtrip＋resume 語義
+    # 11-27 根因修復：stub 必須在呼叫「之前」。舊版在 ensure 之後才把 BINDS 導到
+    # 暫存→假 cid "ob-cid-1" 寫進真 trail/ob_binds.json →（commit step git add trail/
+    # 放寬後）入 repo →之後每個 checkout 帶毒→「已綁—skip」→應綁定頻道斷言失敗
+    # →preflight 紅燈鎖死整條 ob 管線（19:43 起全擋）。
     import tempfile, os as _os
     _d = tempfile.mkdtemp()
     old_parts, old_binds, old_chf, old_obchs = ob.PARTS, ob.BINDS, ob.CHFILE, ob.OBCHS
@@ -246,6 +246,10 @@ def t8_group_and_parts():
     ob.BINDS = _os.path.join(_d, "ob_binds.json")
     ob.CHFILE = _os.path.join(_d, "ob_channel.json")
     ob.OBCHS = _os.path.join(_d, "ob_channels.json")
+    ob.ensure_ob_group("ob-cid-1")
+    assert any("itemtype=7" in u for u in hits), "應建分組（itemtype=7）"
+    assert any("AddChannelsToPrivateGroup" in u for u in hits), "應綁定頻道"
+    # per-part：mark→load roundtrip＋resume 語義
     ob.parts_mark("g-1", 2, "t", "c", "mid-9")
     assert ("g-1", 2) in ob.parts_marked()
     assert ("g-1", 1) not in ob.parts_marked()

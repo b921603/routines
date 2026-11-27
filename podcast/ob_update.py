@@ -789,7 +789,8 @@ def main():
              f"\n頻道首頁 {nb} 篇、缺封面 {nc}。", 1)
         return
     synced, failed = 0, []
-    marked = parts_marked()
+    consec_fail = 0                  # 風暴窗 breaker（11-27：連續 3 集上傳失敗→提早收工，
+    marked = parts_marked()          #  免燒滿 350min timeout；下輪 cron 自動續傳）
     for e in todo:
         key = e["date"].strftime("%Y%m%d")
         full = f'{e["date"].strftime("%F")} {e["title"]}'
@@ -837,6 +838,7 @@ def main():
                 time.sleep(3)
             if ok_all:
                 synced += 1
+                consec_fail = 0
                 if e["guid"]:
                     ledger[e["guid"]] = {"title": full, "pub": e["date"].strftime("%F"),
                                          "at": time.strftime("%F %T"),
@@ -848,6 +850,7 @@ def main():
                     cid = maybe_rotate(cid, ledger)   # 滿額即開新頻（下集進新頻）
             else:
                 failed.append(full[:50])
+                consec_fail += 1
         except Exception as ex:
             log(f"  ✗ {str(ex)[:110]}")
             if isinstance(ex, AuthError) and not _RELOGIN[0]:
@@ -858,6 +861,14 @@ def main():
                 except Exception as le:
                     log(f"  relogin err: {str(le)[:60]}")
             failed.append(full[:50])
+            if "UploadTingFile exhausted" in str(ex) or "保存" in str(ex):
+                consec_fail += 1
+        if consec_fail >= 3:
+            log(f"⛈ 風暴窗：連續 {consec_fail} 集上傳失敗——提早收工（下輪 cron 續傳，免燒 timeout）")
+            ntfy("On Being drain：風暴窗提早收工",
+                 f"連續 {consec_fail} 集上傳失敗（平台擁塞）。本輪 {synced} 成功；"
+                 f"下輪排程自動續傳。", 3)
+            break
     pit = emit_pit(ledger, catalog, dead)
     nb, nc = audit(cid)
     body = (f"同步 {synced}/{len(todo)} 集（{'全集 backfill' if BACKFILL else '日更'}）：\n" +
