@@ -3,8 +3,9 @@
 """ob_sort — 頻道「拖曳排序」＝依集數日期（用戶 11-27 指定，GA 自動化）。
 端點 /ting/OrderPriveteMedia（min.js 實證）：POST form {mediaIds[]: 有序 mids, channelId}
 → success:true。jQuery 的 {mediaIds: [...]} 序列化即 mediaIds[]=，requests 同形。
-排序鍵＝標題開頭的 ISO 日期（"2003-10-30 Laurie Zoloth — …"），升冪＝播出順序
-（舊→新）；OB_SORT_DESC=1 反轉；無日期前綴排最後。全 OB 輪轉頻道逐一處理。
+排序鍵＝標題開頭的 ISO 日期（"2003-10-30 Laurie Zoloth — …"），
+預設降冪＝最新→最舊（用戶 11-27 裁定）；OB_SORT_DESC=0 可反轉為舊→新；
+無日期前綴排最後。全 OB 輪轉頻道逐一處理。
 trail/ob_sort.json 落盤（workflow bot commit）。drain 每班收尾自動重排——
 上傳順序是「上傳時間序」，不自排的話公開頻道永遠新上傳在前（＝播出順序倒反）。"""
 import os, re, sys
@@ -12,7 +13,7 @@ sys.path.insert(0, "podcast")
 import ob_update as OB
 import ob_face_maint as FM
 
-DESC = os.environ.get("OB_SORT_DESC", "") == "1"
+DESC = os.environ.get("OB_SORT_DESC", "1") != "0"   # 預設最新→最舊（用戶 11-27）
 
 def log(m):
     print(f"[sort] {m}", flush=True)

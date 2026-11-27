@@ -3,8 +3,8 @@ name: ob-sort
 on:
   workflow_dispatch:
     inputs:
-      desc:
-        description: "反轉（新→舊）？留空=舊→新（播出順序）"
+      asc:
+        description: "舊→新（播出順序）？留空=最新→最舊（預設）"
         required: false
         default: ""
 
@@ -33,7 +33,7 @@ jobs:
           PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
           OB_CID: ${{ secrets.OB_CID }}
           NTFY_URL: ${{ secrets.NTFY_URL }}
-          OB_SORT_DESC: ${{ github.event.inputs.desc }}
+          OB_SORT_DESC: "${{ github.event.inputs.asc == '1' && '0' || '1' }}"
       - name: commit trail
         if: always()
         run: |
