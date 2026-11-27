@@ -92,8 +92,13 @@ def main():
     for t, mid in targets:
         nt = new_title(t)
         if nt == t:
-            log(f"  ⚠ 規則未命中，跳過: {t[:60]}")
-            failed.append(t[:40])
+            # 11-27 實證：500 回應可能服務端仍生效（異步）——清單已是新標題＝前一輪已改寫成功
+            if any(rep in t for _, rep in RULES):
+                log(f"  ✓ 已是改寫後標題（前輪已生效）: {t[:60]}")
+                done += 1
+            else:
+                log(f"  ⚠ 規則未命中，跳過: {t[:60]}")
+                failed.append(t[:40])
             continue
         log(f"  ▸ {t[:64]}")
         log(f"    → {nt[:64]}")
