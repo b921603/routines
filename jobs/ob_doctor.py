@@ -13,7 +13,9 @@
 trail/ob-doctor.json（workflow 收尾 commit）＋ntfy。
 """
 import os, sys, time, json
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(_HERE), "podcast"))   # ob_update／ob_face_maint
+sys.path.insert(0, _HERE)
 import ob_update as OB
 import ob_face_maint as FM
 
