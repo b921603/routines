@@ -139,7 +139,8 @@ def main():
             f"desc_len={len(g.get('Description') or '')}")
         rep["groups"].append({"name": g.get("Name"), "tag": tag or "OB",
                               "thumb": s, "desc_len": len(g.get("Description") or "")})
-        if FIX and (s in ("empty", "default", "url") or (tag or "OB") == "OB"):
+        # url 形狀＝平台渲染後的有效值（TFF/HTF/BWK 實證）；只修 empty/default＋OB 無條件
+        if FIX and (s in ("empty", "default") or (tag or "OB") == "OB"):
             force_group_thumb(g)
 
     # ── 各集層 ──
