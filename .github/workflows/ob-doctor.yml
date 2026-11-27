@@ -1,0 +1,47 @@
+name: ob-doctor
+# On Being 封面體檢——診斷（唯讀）＋可選修復（fix=true）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      fix:
+        description: "修復模式：重設頻道/分組封面＋補裸圖"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ob-doctor    # 與 backfill/face-maint 並行安全（修復僅動封面欄位）
+
+jobs:
+  doctor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pillow pyyaml
+      - name: covers doctor (diagnose, +fix if requested)
+        env:
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
+          OB_CID: ${{ secrets.OB_CID }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          DOCTOR_FIX: ${{ inputs.fix && '1' || '0' }}
+        run: python jobs/ob_doctor.py
+      - name: commit doctor report
+        if: always()
+        run: |
+          git config user.name "doctor-bot"
+          git config user.email "b921603@users.noreply.github.com"
+          git add trail/ob-doctor.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "ob doctor: report [skip ci]"
+            git pull --rebase origin main || true
+            git push || (sleep 8 && git pull --rebase origin main && git push) || true
+          fi

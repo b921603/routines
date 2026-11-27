@@ -69,16 +69,19 @@ jobs:
             git push || (sleep 8 && git pull --rebase origin main && git push) \
               || echo "trail push deferred (race)"
           fi
-      - name: notify on failure
-        if: failure()
+      - name: triage+notify on failure (six-step SOP, 11-27 runbook)
+        if: failure() || cancelled()
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NTFY_URL: ${{ secrets.NTFY_URL }}
-          RUN_ID: ${{ github.run_id }}
+          TRIAGE_RUN_ID: ${{ github.run_id }}
         run: |
-          python3 - <<'PY'
-          import json, requests, os
-          msg = {"topic": os.environ["NTFY_URL"], "title": "On Being backfill failed",
-                 "priority": 4, "tags": ["rotating_light"],
-                 "message": f"ob-backfill run {os.environ.get('RUN_ID','?')} 失敗——查 log。"}
-          requests.post("https://ntfy.sh/", data=json.dumps(msg), timeout=20)
-          PY
+          python3 jobs/triage.py
+          git config user.name "triage-bot"
+          git config user.email "b921603@users.noreply.github.com"
+          git add trail/triage 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "triage: run ${{ github.run_id }} [skip ci]"
+            git pull --rebase origin main || true
+            git push || (sleep 8 && git pull --rebase origin main && git push) || true
+          fi

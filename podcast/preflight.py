@@ -257,6 +257,22 @@ def t8_group_and_parts():
     ob.req = ob._orig_req
 
 
+def t14_triage_classifier():
+    """11-27 六步診斷自動化：文本分類表＋衛生標記（錯誤分類＝triage 的核心語義）。"""
+    import sys as _s
+    _jd = os.path.join(WROOT, "jobs")
+    if _jd not in _s.path:
+        _s.path.insert(0, _jd)
+    import triage
+    assert triage.classify_text("http retry2: ('Connection aborted.', "
+                                "TimeoutError('The write operation timed out'))") == "storm"
+    assert triage.classify_text("post try0: 200 {\"code\":500,\"message\":\"保存异常\"}") == "busy"
+    assert triage.classify_text("NameError: name 'a' is not defined") == "code"
+    assert triage.classify_text("UpdatePrivateChannel 200 {\"success\":false,\"error\":\"更新失败\"}") == "refuse"
+    assert triage.classify_text("everything fine, 200 OK") is None
+    assert "ob-cid-" in triage.HYGIENE_MARKS, "T8 毒化特徵必在衛生標記"
+
+
 def t13_channel_rotation():
     """11-26 用戶裁定：比照 TFF 每 100 集開新頻。帳本滿額→建新頻＋封面＋分組＋登記簿＋CHFILE。"""
     import tempfile, os as _os, json as _j
@@ -473,6 +489,7 @@ if __name__ == "__main__":
     check("T11 頻道封面補設（ob 間責修復）", t11_channel_cover)
     check("T12 各集封面政策（per-ep 快取＋fallback）", t12_episode_thumb_policy)
     check("T13 頻道容量輪轉（100 集/頻，滿額自動開新頻）", t13_channel_rotation)
+    check("T14 六步診斷分類器（triage SOP 可執行版）", t14_triage_classifier)
     if FAIL:
         print(f"preflight FAIL: {FAIL} —— 部署禁行")
         sys.exit(1)

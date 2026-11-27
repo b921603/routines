@@ -1,0 +1,61 @@
+name: triage
+# 六步一線診斷——可手動派工診斷任何 run（runbook 11-27 SOP 可執行版）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: "要診斷的 run id（空＝自動抓最近一次非綠）"
+        required: false
+      repo:
+        description: "repo（預設本 repo）"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: triage
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pyyaml
+      - name: six-step triage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+          TRIAGE_RUN_ID: ${{ inputs.run_id }}
+          TRIAGE_REPO: ${{ inputs.repo }}
+        run: |
+          python3 - <<'PY'
+          import json, os, requests
+          if not os.environ.get("TRIAGE_RUN_ID"):
+              rs = requests.get(
+                  f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/runs?per_page=15",
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"]},
+                  timeout=30).json().get("workflow_runs", [])
+              bad = [r for r in rs if r.get("conclusion") in ("failure", "cancelled")]
+              if not bad:
+                  print("近期無非綠 run——無事可診")
+                  raise SystemExit(0)
+              os.environ["TRIAGE_RUN_ID"] = str(bad[0]["id"])
+          PY
+          python3 jobs/triage.py
+      - name: commit triage report
+        if: always()
+        run: |
+          git config user.name "triage-bot"
+          git config user.email "b921603@users.noreply.github.com"
+          git add trail/triage 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "triage: run ${{ inputs.run_id || github.run_id }} [skip ci]"
+            git pull --rebase origin main || true
+            git push || (sleep 8 && git pull --rebase origin main && git push) || true
+          fi
