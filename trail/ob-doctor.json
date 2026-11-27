@@ -1,0 +1,46 @@
+{
+ "at": "2026-11-27 04:21:20",
+ "fix": false,
+ "channels": [
+  {
+   "cid": "372fa0de-b091-4d19-89f8-571e3b33b546",
+   "name": "On Being with Krista Tippett",
+   "thumb": "default",
+   "head": "https://static.esdict.cn/MediaPool/ChannelImg/defaul"
+  }
+ ],
+ "groups": [
+  {
+   "name": "On Being with Krista Tippett",
+   "tag": "OB",
+   "thumb": "default",
+   "desc_len": 182
+  },
+  {
+   "name": "Tim Ferriss Show",
+   "tag": "TFF",
+   "thumb": "url",
+   "desc_len": 196
+  },
+  {
+   "name": "How To Fail With Elizabeth Day",
+   "tag": "HTF",
+   "thumb": "url",
+   "desc_len": 150
+  },
+  {
+   "name": "The Bulwark Daily",
+   "tag": "BWK",
+   "thumb": "url",
+   "desc_len": 37
+  }
+ ],
+ "episodes": [
+  {
+   "cid": "372fa0de-b091-4d19-89f8-571e3b33b546",
+   "page0": 20,
+   "bare": 17
+  }
+ ],
+ "verdict": "NEEDS-FIX"
+}
