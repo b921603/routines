@@ -12,7 +12,7 @@ import ob_update as OB
 import ob_face_maint as FM
 
 RULES = [
-    (re.compile(r"surviving-religion-mao", re.I), "programs"),
+    (re.compile(r"program/surviving-religion-mao", re.I), "programs"),
     (re.compile(r"\bgay\b", re.I), "same-sex"),
     (re.compile(r"\bcloned\b", re.I), "genetically modified"),
     (re.compile(r"\bcloning\b", re.I), "genetic modification"),
