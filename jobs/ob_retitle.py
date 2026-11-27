@@ -18,7 +18,7 @@ RULES = [
     (re.compile(r"\bGay\b"), "Same-Sex"),
     (re.compile(r"\bCloning", re.I), "Genetic Duplication"),
 ]
-TARGET_KEYS = ("mao", "mollenkott", "zoloth")     # 4 集（Mao 兩集）
+TARGET_KEYS = ("mao", "mollenkott", "zoloth", "cloning")   # 4 集（Mao 兩集）
 
 
 def log(m):
@@ -34,7 +34,7 @@ def new_title(t):
 
 def listing(cid):
     out = []
-    for pg in range(2):
+    for pg in range(10):      # drain 持續上傳會把老集擠出前 40 條（11-27 實證 Zoloth 掉頁）
         r = OB.req("GET", f"{OB.BASE}/ting/GetPrivateMedias"
                          f"?sortby=0&page={pg}&channelId={cid}", timeout=45)
         for x in re.split(r'<div class="dragBox">', r.text or "")[1:]:
