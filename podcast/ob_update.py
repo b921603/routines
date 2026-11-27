@@ -492,28 +492,45 @@ def post(cid, title, thumb_fid, media_fid, desc, ai_sub=True):
             "description": (desc or "")[:3000],
             "mediatype": "0", "intros": "", "istiming": "false", "timing": "",
             "html": "", "insertImage": "false", "mdChapterId": ""}
-    for k in range(10):
+    def _exists():
+        """清單直查（前 2 頁 40 條涵蓋最新）——建立型 API 的唯一真相。"""
+        try:
+            tt = norm(title)
+            for pg in (0, 1):
+                rr = req("GET", f"{BASE}/ting/GetPrivateMedias?sortby=0&page={pg}&channelId={cid}",
+                         timeout=45)
+                for x in re.split(r'<div class="dragBox">', rr.text or "")[1:]:
+                    tm = re.search(r'rl-title"[^>]*title="([^"]*)"', x)
+                    if tm and norm(html.unescape(tm.group(1))) == tt:
+                        return True
+        except Exception:
+            pass
+        return False
+
+    if _exists():
+        log("  post: 同名集已存在（上輪異步孤兒）——不再創建，認成功")
+        return True
+    # 11-27 Evangelicals ×10 驗屍：uploadprivatemedia 是「建立型」API——500/錯誤回應
+    # 仍可能異步建檔（每重打一次=一份副本）；「音频/视频是必须上传的」十連=十份副本。
+    # 契約：最多兩次 POST；每次「失敗」後以清單驗證為唯一真相，驗到即認成功。
+    for k in range(2):
         try:
             r = req("POST", f"{BASE}/ting/uploadprivatemedia", data=data, timeout=120)
             flat = (r.text or "").replace(" ", "")
-            # 11-26 根因修復（殭屍 run 45727889185 驗屍）：uploadprivatemedia 成功回
-            # {"code":200,"message":"保存成功","data":null}——舊判定抄 DeletePriveteMedia
-            # 的 "success":true 形狀→永不認成功→每集連傳 5 份＋判失敗不入帳本。
-            # 對齊 tfs_engine（895 集實證）的 code:200 判定；busy 訊息補 资源进程。
+            # 11-26 根因修復（殭屍 run 45727889185 驗屍）：成功回 {"code":200,...}——
+            # 對齊 tfs_engine（895 集實證）的 code:200 判定。
             if r.status_code == 200 and ('"code":200' in flat or '"success":true' in flat):
                 return True
-            txt = r.text or ""
-            if any(b in txt for b in SLOT_BUSY):
-                log(f"  slot busy — wait 90s（{k + 1}/10）")
-                time.sleep(90)
-                continue
-            log(f"  post try{k}: {r.status_code} {txt[:80]}")
-            time.sleep(8)
+            log(f"  post try{k}: {r.status_code} {(r.text or '')[:80]}")
         except AuthError:
             raise
         except Exception as ex:
             log(f"  post try{k} err: {str(ex)[:80]}")
-            time.sleep(8)
+        for _ in range(6):                     # ~90s 驗證窗：500-異步建檔秒級落地
+            time.sleep(15)
+            if _exists():
+                log("  post: 回應雖敗、清單已現——500-異步成立，認成功")
+                return True
     return False
 
 
