@@ -132,19 +132,18 @@ def ntfy(title, body, prio=3):
     if not n:
         return
     try:
-        # ntfy JSON publish 三契約（11-27 沙盒七形狀對照實證）：
-        # ①必須 POST 到「根路徑」——topic-URL 的 JSON POST 被整包當 raw message body
-        # ②requests json= 形狀被 ntfy 400「body must be valid JSON」（curl 等價的
-        #   data+明示 Content-Type 則成功，TEST5/TEST6 渲染實證）
+        # ntfy JSON publish 三契約（11-27 沙盒十形狀矩陣實證）：
+        # ①必須 POST 到「根路徑」＋topic 入 body——topic-URL 的 JSON POST 被整包當
+        #   raw message body（title 全丟）
+        # ②priority 必須是 int——字串 "3" 讓 Go unmarshal 整包炸 40024「body must
+        #   be valid JSON」（誤導性報錯；json=/data 形狀皆無罪，真兇是型別）
         # ③標題/本文任意 Unicode（header 版 latin-1 炸中文——P4 中文警報曾全數靜默失敗）
         # 回應狀態必記錄（400 曾被靜默吞掉＝通知無聲消失，16:32Z 實證）。
         topic = n.rstrip("/").rsplit("/", 1)[-1]
         root = n.rstrip("/").rsplit("/", 1)[0] + "/"
-        payload = json.dumps({"topic": topic, "title": title, "message": body,
-                              "priority": str(prio), "tags": ["podcast"]},
-                             ensure_ascii=False).encode("utf-8")
-        r = SES.post(root, timeout=30, data=payload,
-                     headers={"Content-Type": "application/json"})
+        r = SES.post(root, timeout=30,
+                     json={"topic": topic, "title": title, "message": body,
+                           "priority": int(prio), "tags": ["podcast"]})
         if r.status_code != 200:
             log(f"ntfy HTTP {r.status_code}: {(r.text or '')[:80]}")
     except Exception as ex:
