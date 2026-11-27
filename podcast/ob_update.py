@@ -132,15 +132,21 @@ def ntfy(title, body, prio=3):
     if not n:
         return
     try:
-        # JSON publish 必須 POST 到「根路徑」（topic 入 body）——ntfy 對 topic-URL 的
-        # JSON POST 一律當 raw message 整包倒進 body（11-27 沙盒 A/B 對照實證：
-        # 同 payload 根路徑 title 完美渲染、topic-URL 變 raw）。header 版中文標題
-        # latin-1 會炸（11-27 發現 P4 中文警報一直靜默失敗）——故 JSON＋根路徑。
+        # ntfy JSON publish 三契約（11-27 沙盒七形狀對照實證）：
+        # ①必須 POST 到「根路徑」——topic-URL 的 JSON POST 被整包當 raw message body
+        # ②requests json= 形狀被 ntfy 400「body must be valid JSON」（curl 等價的
+        #   data+明示 Content-Type 則成功，TEST5/TEST6 渲染實證）
+        # ③標題/本文任意 Unicode（header 版 latin-1 炸中文——P4 中文警報曾全數靜默失敗）
+        # 回應狀態必記錄（400 曾被靜默吞掉＝通知無聲消失，16:32Z 實證）。
         topic = n.rstrip("/").rsplit("/", 1)[-1]
         root = n.rstrip("/").rsplit("/", 1)[0] + "/"
-        SES.post(root, timeout=30, json={"topic": topic, "title": title,
-                                         "message": body, "priority": str(prio),
-                                         "tags": ["podcast"]})
+        payload = json.dumps({"topic": topic, "title": title, "message": body,
+                              "priority": str(prio), "tags": ["podcast"]},
+                             ensure_ascii=False).encode("utf-8")
+        r = SES.post(root, timeout=30, data=payload,
+                     headers={"Content-Type": "application/json"})
+        if r.status_code != 200:
+            log(f"ntfy HTTP {r.status_code}: {(r.text or '')[:80]}")
     except Exception as ex:
         log(f"ntfy err: {str(ex)[:60]}")
 
