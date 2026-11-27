@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write          # shift_guard 丟班自動補班 dispatch（11-27）
 
 jobs:
   run:
@@ -35,6 +36,21 @@ jobs:
           SHAPE_DEV: ${{ secrets.SHAPE_DEV }}
         shell: pwsh
         run: node jobs/index.cjs
+
+      - name: shift-guard (GitHub 丟班自動補班；11-27 用戶問責後固化)
+        if: always()
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: shift-guard run
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+        shell: pwsh
+        run: |
+          pip install requests pyyaml -q
+          python jobs/shift_guard.py
 
       - name: keep
         if: always()
