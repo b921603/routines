@@ -45,9 +45,10 @@ def listing(cid):
     return out
 
 
-def patch(cid, mid, nt, info):
+def patch(cid, mid, nt, info, payload_extra=None):
     """face-maint 實證 payload（media 省略＝沿用原音檔）－thumb 欄位不帶。"""
     payload = {"id": mid, "title": nt, "channelId": cid,
+               **(payload_extra or {}),
                "lrc": info.get("lrc") or "",
                "needProcessLrc": "false", "needKeepformat": "false",
                "reformatParagraph": "false", "splitLongSentence": "true",
@@ -99,7 +100,26 @@ def main():
         ep = OB.req("GET", f"{OB.BASE}/Ting/upload?channelid={cid}"
                            f"&mediaid={mid}&itemType=0", timeout=45).text or ""
         info = FM.parse_edit_page(ep)
-        ok, msg = patch(cid, mid, nt, info)
+        # 「不存在音频」探勘：編輯頁找音檔 fid（UUID 形狀的 hidden 值／mp3 欄位）
+        fid = None
+        for m in re.finditer(r'name="([^"]*(?:mp3|media|audio|file)[^"]*)"[^>]*'
+                             r'(?:value="([0-9a-f-]{36})")?', ep, re.I):
+            if m.group(2):
+                fid = m.group(2)
+                log(f"    [probe] {m.group(1)} = {fid}")
+        if not fid:
+            for m in re.finditer(r'(?:fileId|media_id|audioId)["\']?\s*[:=]\s*["\']'
+                                 r'([0-9a-f]{8}-[0-9a-f-]{27,36})["\']', ep, re.I):
+                fid = m.group(1)
+                log(f"    [probe-js] {fid}")
+                break
+        if fid and fid != mid:
+            payload_extra = {"media": fid}
+            log(f"    帶 media={fid[:8]}… 重 patch")
+        else:
+            payload_extra = None
+            log("    無音檔 fid 可考——照省略契約再試（若仍不存在音频→此集需人工）")
+        ok, msg = patch(cid, mid, nt, info, payload_extra)
         if not ok:
             log(f"    ✗ patch 失敗: {msg}")
             failed.append(t[:40])
