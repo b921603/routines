@@ -1,5 +1,5 @@
 {
- "at": "2026-11-27 04:25:28",
+ "at": "2026-11-27 04:50:34",
  "fix": true,
  "channels": [
   {
@@ -13,7 +13,7 @@
   {
    "name": "On Being with Krista Tippett",
    "tag": "OB",
-   "thumb": "default",
+   "thumb": "url",
    "desc_len": 182
   },
   {
@@ -39,7 +39,7 @@
   {
    "cid": "372fa0de-b091-4d19-89f8-571e3b33b546",
    "page0": 20,
-   "bare": 17
+   "bare": 0
   }
  ],
  "verdict": "NEEDS-FIX"
