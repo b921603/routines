@@ -15,18 +15,42 @@ def log(m):
 
 
 def index_rows():
-    """ting/index 管理頁 → [(title, state)]。防禦式解析：以 顯示狀態字串為錨。"""
+    """ting/index 是 JS 殼——資料走 XHR。回傳 (殼線索, rows)。"""
     r = OB.req("GET", f"{OB.BASE}/ting/index", timeout=45)
     txt = r.text or ""
-    rows = []
-    for m in re.finditer(r"(未顯示|正常)", txt):
-        ctx = txt[max(0, m.start() - 1200):m.start()]
-        tm = None
-        for tm in re.finditer(r'title="([^"]{8,})"', ctx):
-            pass
-        title = html.unescape(tm.group(1)) if tm else "?"
-        rows.append((title.strip(), m.group(1)))
-    return rows, len(txt)
+    clues = []
+    for m in re.finditer(r'(?:src|href)=["\']([^"\']+)["\']', txt):
+        u = m.group(1)
+        if ".js" in u or "ting" in u.lower():
+            clues.append(u)
+    for m in re.finditer(r'["\']([^"\']*(?:ting|media|list|upload)[^"\']*)["\']', txt):
+        u = m.group(1)
+        if "/" in u and len(u) < 80 and u not in clues:
+            clues.append(u)
+    return clues, txt
+
+
+def try_endpoint():
+    """直接試常見管理清單端點（形狀探險同款）。"""
+    cands = [
+        ("GET", "/ting/GetUploadList"),
+        ("GET", "/ting/getmedialist"),
+        ("GET", "/ting/GetPrivateMedias?page=0"),   # 無 channelId＝全部？
+        ("POST", "/ting/GetMyUpload"),
+        ("GET", "/ting/myupload"),
+    ]
+    for method, path in cands:
+        try:
+            r = OB.req(method, f"{OB.BASE}{path}", data="" if method == "POST" else None,
+                       timeout=30)
+            t = (r.text or "")[:120].replace("\n", " ")
+            mark = "未顯示" in (r.text or "") or "正常" in (r.text or "")
+            log(f"  probe {method} {path}: {r.status_code} len={len(r.text or '')} 含狀態字={mark} | {t[:90]!r}")
+            if mark:
+                return method, path, r.text
+        except Exception as ex:
+            log(f"  probe {method} {path}: err {str(ex)[:60]}")
+    return None, None, None
 
 
 def edit_fields(cid, mid):
