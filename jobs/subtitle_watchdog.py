@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """subtitle_watchdog — Volf/Zoloth 字幕管線追蹤到癒（11-27 兩案收斂自動化）。
 Volf：處理完成且 lrc 空→委婉改寫（Violence→Conflict）＋重觸發；lrc ✓→結案。
-Zoloth：lrc 空→限流（4h）重觸發；✓→結案。全部經 mediaid 直攻（清單免疫）。
+Zoloth（11-27 驗屍改判）：壞媒體集已刪＋帳本 guid 已移除→drain 重傳新鮮副本；
+watchdog 改依標題動態查找新 mid（重傳後自動接手），lrc ✓→結案。
 狀態 trail/sub_watch.json；ntfy 只報狀態變化。"""
 import os, re, sys, json, time
 sys.path.insert(0, "podcast")
@@ -108,10 +109,28 @@ def main():
         st["volf"] = {"state": "euphemized+retriggered", "at": time.strftime("%F %T")}
         report.append("Volf 已改寫＋重觸發")
 
-    # ── Zoloth ──
-    info, method, _ = edit(cid, ZOLOTH_MID)
+    # ── Zoloth（依標題動態查找——壞媒體舊 mid 已刪，重傳後 mid 變新）──
+    zmid = None
+    for pg in range(6):
+        rr = OB.req("GET", f"{OB.BASE}/ting/GetPrivateMedias?sortby=0&page={pg}&channelId={cid}",
+                    timeout=45)
+        for b in re.split(r'<div class="dragBox">', rr.text or "")[1:]:
+            tm = re.search(r'rl-title"[^>]*title="([^"]*)"', b)
+            if tm and "zoloth" in OB.norm(__import__("html").unescape(tm.group(1)).lower()):
+                mm = re.search(r'media_id"[^>]*data="([^"]+)"', b)
+                if mm:
+                    zmid = mm.group(1)
+        if zmid or "dragBox" not in (rr.text or ""):
+            break
+    if not zmid:
+        log("Zoloth: 清單無此集——等待 drain 重傳（帳本 guid 已移除）")
+        st["zoloth"] = {"state": "reuploading", "at": time.strftime("%F %T")}
+        OB.wj(STATE, st)
+        log(f"state: {json.dumps(st, ensure_ascii=False)}")
+        return
+    info, method, _ = edit(cid, zmid)
     lrc = bool((info.get("lrc") or "").strip())
-    bd = badge(cid, ZOLOTH_MID)
+    bd = badge(cid, zmid)
     if lrc:
         log(f"Zoloth: lrc ✓ badge={bd}——結案（未顯示旗標應隨之解除）")
         st["zoloth"] = {"state": "done", "at": time.strftime("%F %T")}

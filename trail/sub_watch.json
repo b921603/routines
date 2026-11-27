@@ -1,1 +1,11 @@
-{"volf": {"state": "processing", "at": "2026-11-27 11:01:50"}, "zoloth_last_trigger": 1795777306.9452958, "zoloth": {"state": "waiting-subtitle", "at": "2026-11-27 11:02:37"}}
+{
+ "volf": {
+  "state": "processing",
+  "at": "2026-11-27 11:01:50"
+ },
+ "zoloth": {
+  "state": "reuploading",
+  "at": "2026-11-27 13:40:00",
+  "note": "bad-media ep deleted 13:35Z; drain re-upload pending; watchdog now tracks by title"
+ }
+}
