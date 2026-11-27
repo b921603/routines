@@ -14,6 +14,7 @@ import ob_update as OB
 import ob_face_maint as FM
 
 DESC = os.environ.get("OB_SORT_DESC", "1") != "0"   # 預設最新→最舊（用戶 11-27）
+QUIET = os.environ.get("OB_SORT_QUIET", "") == "1"      # drain 內嵌：成功不發通知（免 12/日轟炸）
 
 def log(m):
     print(f"[sort] {m}", flush=True)
@@ -66,9 +67,12 @@ def main():
     ok = all(r["ok"] for r in results)
     OB.wj(os.path.join(OB.TRAIL, "ob_sort.json"),
           {"at": OB.time.strftime("%F %T"), "desc": DESC, "channels": results})
-    OB.ntfy(f"OB 頻道排序（依日期）{'✓' if ok else '✗'}",
+    if QUIET and ok:
+        log("sort ok（drain 內嵌靜音模式——只報失敗）")
+        return
+    OB.ntfy(f"OB 頻道排序（最新→最舊）{'✓' if ok else '✗'}",
             "；".join(f"{r.get('name') or r['cid'][:8]} {r['n']} 集" for r in results)
-            + "——拖曳排序已寫入，聽眾端為播出順序。", 3 if ok else 4)
+            + "——拖曳排序已寫入（依日期：最新→最舊）。", 3 if ok else 4)
     if not ok:
         log("done (exit 1: sort failed)")
         sys.exit(1)

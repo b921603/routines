@@ -65,6 +65,7 @@ jobs:
           PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
           OB_CID: ${{ secrets.OB_CID }}
           NTFY_URL: ${{ secrets.NTFY_URL }}
+          OB_SORT_QUIET: "1"
       - name: commit trail (channel+ledger+pit)
         if: always()
         run: |

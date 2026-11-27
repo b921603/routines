@@ -132,11 +132,15 @@ def ntfy(title, body, prio=3):
     if not n:
         return
     try:
-        # JSON publish：Title/Message 支援任意 Unicode（header 版 latin-1 會炸中文標題
-        # ——11-27 發現 P4 中文警報其實一直在靜默失敗）
-        SES.post(n, timeout=30, json={"topic": n, "title": title,
-                                      "message": body, "priority": str(prio),
-                                      "tags": ["podcast"]})
+        # JSON publish 必須 POST 到「根路徑」（topic 入 body）——ntfy 對 topic-URL 的
+        # JSON POST 一律當 raw message 整包倒進 body（11-27 沙盒 A/B 對照實證：
+        # 同 payload 根路徑 title 完美渲染、topic-URL 變 raw）。header 版中文標題
+        # latin-1 會炸（11-27 發現 P4 中文警報一直靜默失敗）——故 JSON＋根路徑。
+        topic = n.rstrip("/").rsplit("/", 1)[-1]
+        root = n.rstrip("/").rsplit("/", 1)[0] + "/"
+        SES.post(root, timeout=30, json={"topic": topic, "title": title,
+                                         "message": body, "priority": str(prio),
+                                         "tags": ["podcast"]})
     except Exception as ex:
         log(f"ntfy err: {str(ex)[:60]}")
 
