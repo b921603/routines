@@ -1,60 +1,67 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""jobs/diag_display.py — 「未顯示」偵查（11-27 用戶截圖：ting/index 多集顯示 未顯示）。
-
-唯讀。①抓 ting/index 管理清單→逐列定位 顯示狀態（未顯示/正常）＋標題→
-與帳本（how＝heal/backfill）對照；②各挑一集 未顯示/正常 → 抓編輯頁全部表單欄位
-→ diff 找出「顯示」開關欄位名與值 → 為修復提供契約。
-"""
-import os, re, sys, json, html
+"""jobs/diag_display.py v3 — 「未顯示」偵查。ting/index 是 JS 殼→
+①挖殼線索（script/端點字串）②形狀探險試管理清單端點③找到含狀態的端點後
+解析列＋挑未顯示/正常各一集抓編輯頁欄位 diff。唯讀。"""
+import os, re, sys, html
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "podcast"))
 import ob_update as OB
+
 
 def log(m):
     print(f"[disp] {m}", flush=True)
 
 
-def index_rows():
-    """ting/index 是 JS 殼——資料走 XHR。回傳 (殼線索, rows)。"""
+def shell_clues():
     r = OB.req("GET", f"{OB.BASE}/ting/index", timeout=45)
     txt = r.text or ""
-    clues = []
+    clues = set()
     for m in re.finditer(r'(?:src|href)=["\']([^"\']+)["\']', txt):
         u = m.group(1)
-        if ".js" in u or "ting" in u.lower():
-            clues.append(u)
-    for m in re.finditer(r'["\']([^"\']*(?:ting|media|list|upload)[^"\']*)["\']', txt):
+        if ".js" in u:
+            clues.add(u)
+    for m in re.finditer(r'["\']([^"\']*(?:ting|Media|media|List|list|upload)[^"\']*)["\']', txt):
         u = m.group(1)
-        if "/" in u and len(u) < 80 and u not in clues:
-            clues.append(u)
+        if "/" in u and len(u) < 90 and not u.startswith("#"):
+            clues.add(u)
     return clues, txt
 
 
-def try_endpoint():
-    """直接試常見管理清單端點（形狀探險同款）。"""
+def probe_endpoints():
     cands = [
-        ("GET", "/ting/GetUploadList"),
-        ("GET", "/ting/getmedialist"),
-        ("GET", "/ting/GetPrivateMedias?page=0"),   # 無 channelId＝全部？
-        ("POST", "/ting/GetMyUpload"),
-        ("GET", "/ting/myupload"),
+        ("GET", "/ting/GetUploadList"), ("GET", "/ting/getmedialist"),
+        ("GET", "/ting/GetPrivateMedias?page=0"), ("POST", "/ting/GetMyUpload"),
+        ("GET", "/ting/myupload"), ("GET", "/ting/index/list"),
+        ("POST", "/ting/GetMediaList"), ("GET", "/Ting/GetUploadedList"),
     ]
     for method, path in cands:
         try:
-            r = OB.req(method, f"{OB.BASE}{path}", data="" if method == "POST" else None,
-                       timeout=30)
-            t = (r.text or "")[:120].replace("\n", " ")
-            mark = "未顯示" in (r.text or "") or "正常" in (r.text or "")
-            log(f"  probe {method} {path}: {r.status_code} len={len(r.text or '')} 含狀態字={mark} | {t[:90]!r}")
+            r = OB.req(method, f"{OB.BASE}{path}",
+                       data="" if method == "POST" else None, timeout=30)
+            body = r.text or ""
+            mark = ("未顯示" in body) or ("正常" in body)
+            log(f"  probe {method} {path}: {r.status_code} len={len(body)} 狀態字={mark}")
             if mark:
-                return method, path, r.text
+                return method, path, body
         except Exception as ex:
             log(f"  probe {method} {path}: err {str(ex)[:60]}")
     return None, None, None
 
 
+def parse_rows(body):
+    rows = []
+    for m in re.finditer(r"(未顯示|正常)", body):
+        ctx = body[max(0, m.start() - 1500):m.start()]
+        tm = None
+        for tm in re.finditer(r'title="([^"]{8,})"', ctx):
+            pass
+        t2 = re.findall(r'>([^<>]{12,})<', ctx)
+        title = html.unescape(tm.group(1)) if tm else (t2[-1].strip() if t2 else "?")
+        rows.append((title.strip(), m.group(1)))
+    return rows
+
+
 def edit_fields(cid, mid):
-    """編輯頁全部表單欄位（input/select/textarea name→value）。"""
     r = OB.req("GET", f"{OB.BASE}/Ting/upload?channelid={cid}&mediaid={mid}&itemType=0",
                timeout=45)
     t = r.text or ""
@@ -65,28 +72,51 @@ def edit_fields(cid, mid):
         if not nm:
             continue
         val = re.search(r'value="([^"]*)"', tag)
-        checked = 'checked' in tag
-        fields[nm.group(1)] = ("CHECKED" if checked else
-                               (html.unescape(val.group(1)) if val else ""))
+        fields[nm.group(1)] = ("CHECKED" if "checked" in tag else
+                               (html.unescape(val.group(1))[:80] if val else ""))
     return fields
 
 
 def main():
-    log("=== 未顯示偵查（唯讀）===")
+    log("=== 未顯示偵查 v3（唯讀）===")
     OB.login()
     cid = OB.channel_id()
-    rows, page_bytes = index_rows()
-    log(f"ting/index 頁面 {page_bytes}B，狀態列 {len(rows)} 條")
-    led = OB.rj(OB.LEDGER, {}) or {}
+    clues, shell = shell_clues()
+    log(f"殼 {len(shell)}B｜線索 {len(clues)} 條：")
+    for c in sorted(clues)[:20]:
+        log(f"    {c[:88]}")
+    method, path, body = probe_endpoints()
+    if not body:
+        log("!! 常見端點都沒中——下一步：抓殼引用的 JS 檔找真正的 XHR 路徑")
+        for u in sorted(clues):
+            if u.endswith(".js"):
+                url = u if u.startswith("http") else f"{OB.BASE}{u}"
+                try:
+                    j = OB.retry(lambda: OB.requests.get(url, headers=OB.UA, timeout=60))
+                    js = j.text or ""
+                    if "未顯示" in js:
+                        i = js.index("未顯示")
+                        log(f"  ★ JS 含狀態字：{url[:80]}")
+                        log(f"    上下文: …{js[max(0,i-300):i+200]}…")
+                except Exception as ex:
+                    log(f"  js fetch err {str(ex)[:50]}")
+        return
+    rows = parse_rows(body)
     hidden = [t for t, s in rows if s == "未顯示"]
     normal = [t for t, s in rows if s == "正常"]
-    log(f"未顯示 {len(hidden)}｜正常 {len(normal)}")
-    for t, s in rows[:24]:
-        how = next((v.get("how") for k, v in led.items()
-                    if OB.norm(v.get("title", "")) and t.lower().startswith(v.get("title", "")[:24].lower())), "?")
-        log(f"  [{s}] ({how}) {t[:58]}")
-    # 挑樣本：各一集 抓編輯頁 diff
-    media = FM_list(cid) if False else None
+    log(f"端點 {method} {path}｜列 {len(rows)}：未顯示 {len(hidden)}｜正常 {len(normal)}")
+    led = OB.rj(OB.LEDGER, {}) or {}
+
+    def how_of(t):
+        for v in led.values():
+            tt = v.get("title", "")
+            if tt and t.lower().startswith(tt.lower()[:20]):
+                return v.get("how")
+        return "?"
+
+    for t, s in rows[:20]:
+        log(f"  [{s}] ({how_of(t)}) {t[:56]}")
+
     def find_mid(title):
         for pg in range(3):
             r = OB.req("GET", f"{OB.BASE}/ting/GetPrivateMedias?sortby=0&page={pg}&channelId={cid}",
@@ -97,22 +127,18 @@ def main():
                 if tm and mid and html.unescape(tm.group(1)).strip() == title.strip():
                     return mid.group(1)
         return None
+
     for tag, pool in (("未顯示", hidden), ("正常", normal)):
         if not pool:
             continue
         title = pool[0]
         mid = find_mid(title)
-        log(f"── 樣本[{tag}] {title[:50]} mid={mid}")
+        log(f"── 樣本[{tag}] mid={mid} {title[:50]}")
         if not mid:
-            log("  mid 未找到——跳過")
             continue
         f = edit_fields(cid, mid)
-        log(f"  欄位 {len(f)} 個：")
         for k in sorted(f):
-            v = str(f[k])
-            if len(v) > 60:
-                v = v[:60] + "…"
-            log(f"    {k} = {v!r}")
+            log(f"    {k} = {f[k]!r}")
     log("=== 偵查完畢 ===")
 
 
