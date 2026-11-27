@@ -132,8 +132,11 @@ def ntfy(title, body, prio=3):
     if not n:
         return
     try:
-        SES.post(n, data=body.encode(), timeout=30,
-                 headers={"Title": title, "Priority": str(prio), "Tags": "podcast"})
+        # JSON publish：Title/Message 支援任意 Unicode（header 版 latin-1 會炸中文標題
+        # ——11-27 發現 P4 中文警報其實一直在靜默失敗）
+        SES.post(n, timeout=30, json={"topic": n, "title": title,
+                                      "message": body, "priority": str(prio),
+                                      "tags": ["podcast"]})
     except Exception as ex:
         log(f"ntfy err: {str(ex)[:60]}")
 

@@ -12,13 +12,17 @@ OB.login()
 cid = OB.channel_id()
 
 def find(key):
-    for pg in range(10):
+    for pg in range(30):        # #17 持續上傳會把舊集擠到深頁（11-27 兩度實證）
         rr = OB.req("GET", f"{OB.BASE}/ting/GetPrivateMedias?sortby=0&page={pg}&channelId={cid}", timeout=45)
-        for b in re.split(r'<div class="dragBox">', rr.text or "")[1:]:
+        segs = re.split(r'<div class="dragBox">', rr.text or "")[1:]
+        if not segs:
+            break
+        for b in segs:
             tm = re.search(r'rl-title"[^>]*title="([^"]*)"', b)
             mid = re.search(r'media_id"[^>]*data="([^"]+)"', b)
             if tm and mid and key in html.unescape(tm.group(1)).lower():
                 return html.unescape(tm.group(1)), mid.group(1)
+    log(f"  find({key!r}): 30 頁未命中")
     return None, None
 
 def save(mid, payload, tag):
