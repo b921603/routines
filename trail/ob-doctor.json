@@ -1,12 +1,12 @@
 {
- "at": "2026-11-27 04:21:20",
- "fix": false,
+ "at": "2026-11-27 04:25:28",
+ "fix": true,
  "channels": [
   {
    "cid": "372fa0de-b091-4d19-89f8-571e3b33b546",
    "name": "On Being with Krista Tippett",
    "thumb": "default",
-   "head": "https://static.esdict.cn/MediaPool/ChannelImg/defaul"
+   "head": "https://static.eudic.net/MediaPool/ChannelImg/defaul"
   }
  ],
  "groups": [
