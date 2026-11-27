@@ -133,15 +133,40 @@ def main():
         except Exception as ex:
             log(f"  js err {str(ex)[:50]}")
     # 編輯頁樣本：找一個 Mao 標題（若在清單）
-    tgt = next((x for x in boxes if "mao" in x.lower()), None)
-    if tgt:
-        tm = re.search(r'rl-title"[^>]*title="([^"]*)"', tgt)
-        mid = re.search(r'media_id"[^>]*data="([^"]+)"', tgt)
-        if tm and mid:
-            log(f"── 編輯頁欄位（未顯示樣本：{html.unescape(tm.group(1))[:44]}）──")
-            f = edit_fields(cid, mid.group(1))
-            for k in sorted(f):
-                log(f"    {k} = {f[k]!r}")
+    def fields_of(pred, tag):
+        x = next((x for x in boxes if pred(x.lower())), None)
+        if not x:
+            log(f"  （{tag} 樣本不在清單）")
+            return {}
+        tm = re.search(r'rl-title"[^>]*title="([^"]*)"', x)
+        mid = re.search(r'media_id"[^>]*data="([^"]+)"', x)
+        if not (tm and mid):
+            return {}
+        log(f"  [{tag}] {html.unescape(tm.group(1))[:52]}")
+        return edit_fields(cid, mid.group(1))
+
+    fh = fields_of(lambda x: "mao" in x, "未顯示")
+    fn = fields_of(lambda x: "spirit of defiance" in x, "正常")
+    keys = sorted(set(fh) | set(fn))
+    log("── 編輯頁欄位 diff（未顯示 vs 正常）──")
+    for k in keys:
+        a, b = fh.get(k, "<缺>"), fn.get(k, "<缺>")
+        if a != b:
+            log(f"    {k}: 未顯示={a!r} | 正常={b!r}")
+    # JS 轉義字串
+    try:
+        j = OB.retry(lambda: OB.requests.get(f"{OB.BASE}/js/common.min.js",
+                                             headers=OB.UA, timeout=60))
+        js = j.text or ""
+        log(f"common.min.js {len(js)}B")
+        for esc in ("\\u672a\\u663e\\u793a", "\\u6b63\\u5e38",
+                    "GetPrivateMedias", "studyList"):
+            for m in re.finditer(re.escape(esc), js, re.I):
+                i = m.start()
+                log(f"  ★ {esc!r} @ …{js[max(0, i-260):i+260]}…")
+                break
+    except Exception as ex:
+        log(f"  common.min.js err: {str(ex)[:60]}")
     log("=== 偵查完畢 ===")
     return
 
