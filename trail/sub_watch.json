@@ -1,11 +1,1 @@
-{
- "volf": {
-  "state": "processing",
-  "at": "2026-11-27 11:01:50"
- },
- "zoloth": {
-  "state": "reuploading",
-  "at": "2026-11-27 13:40:00",
-  "note": "bad-media ep deleted 13:35Z; drain re-upload pending; watchdog now tracks by title"
- }
-}
+{"volf": {"state": "done", "at": "2026-11-27 21:28:29"}, "zoloth": {"state": "done", "at": "2026-11-27 21:28:47"}}
