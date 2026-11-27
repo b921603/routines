@@ -144,63 +144,6 @@ def main():
                 log(f"    {k} = {f[k]!r}")
     log("=== 偵查完畢 ===")
     return
-    method, path, body = probe_endpoints()  # noqa: 保留參考
-    if not body:
-    method, path, body = probe_endpoints()
-    if not body:
-        log("!! 常見端點都沒中——下一步：抓殼引用的 JS 檔找真正的 XHR 路徑")
-        for u in sorted(clues):
-            if u.endswith(".js"):
-                url = u if u.startswith("http") else f"{OB.BASE}{u}"
-                try:
-                    j = OB.retry(lambda: OB.requests.get(url, headers=OB.UA, timeout=60))
-                    js = j.text or ""
-                    if "未顯示" in js:
-                        i = js.index("未顯示")
-                        log(f"  ★ JS 含狀態字：{url[:80]}")
-                        log(f"    上下文: …{js[max(0,i-300):i+200]}…")
-                except Exception as ex:
-                    log(f"  js fetch err {str(ex)[:50]}")
-        return
-    rows = parse_rows(body)
-    hidden = [t for t, s in rows if s == "未顯示"]
-    normal = [t for t, s in rows if s == "正常"]
-    log(f"端點 {method} {path}｜列 {len(rows)}：未顯示 {len(hidden)}｜正常 {len(normal)}")
-    led = OB.rj(OB.LEDGER, {}) or {}
-
-    def how_of(t):
-        for v in led.values():
-            tt = v.get("title", "")
-            if tt and t.lower().startswith(tt.lower()[:20]):
-                return v.get("how")
-        return "?"
-
-    for t, s in rows[:20]:
-        log(f"  [{s}] ({how_of(t)}) {t[:56]}")
-
-    def find_mid(title):
-        for pg in range(3):
-            r = OB.req("GET", f"{OB.BASE}/ting/GetPrivateMedias?sortby=0&page={pg}&channelId={cid}",
-                       timeout=45)
-            for x in re.split(r'<div class="dragBox">', r.text or "")[1:]:
-                tm = re.search(r'rl-title"[^>]*title="([^"]*)"', x)
-                mid = re.search(r'media_id"[^>]*data="([^"]+)"', x)
-                if tm and mid and html.unescape(tm.group(1)).strip() == title.strip():
-                    return mid.group(1)
-        return None
-
-    for tag, pool in (("未顯示", hidden), ("正常", normal)):
-        if not pool:
-            continue
-        title = pool[0]
-        mid = find_mid(title)
-        log(f"── 樣本[{tag}] mid={mid} {title[:50]}")
-        if not mid:
-            continue
-        f = edit_fields(cid, mid)
-        for k in sorted(f):
-            log(f"    {k} = {f[k]!r}")
-    log("=== 偵查完畢 ===")
 
 
 if __name__ == "__main__":
