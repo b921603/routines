@@ -24,7 +24,7 @@ def date_key(title):
 
 
 def sort_channel(cid, name=""):
-    eps = FM.list_media(cid)
+    eps = [(t[0], t[1]) for t in FM.list_media(cid)]   # (title, mid, bare)→取前二
     if not eps:
         log(f"{name or cid[:8]}: 0 集——跳過")
         return None
