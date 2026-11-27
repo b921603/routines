@@ -153,6 +153,46 @@ def main():
         a, b = fh.get(k, "<缺>"), fn.get(k, "<缺>")
         if a != b:
             log(f"    {k}: 未顯示={a!r} | 正常={b!r}")
+    # ── studyList 主攻（学习内容管理＝未顯示/正常 的正主層）──
+    sl = None
+    for method, path in (("GET", "/studyList"), ("GET", "/studyList?page=0"),
+                         ("POST", "/studyList")):
+        try:
+            r = OB.req(method, f"{OB.BASE}{path}",
+                       data="" if method == "POST" else None, timeout=45)
+            body = r.text or ""
+            log(f"  probe {method} {path}: {r.status_code} len={len(body)} "
+                f"未顯示={'未顯示' in body} 正常={'正常' in body}")
+            if "未顯示" in body:
+                sl = body
+                break
+        except Exception as ex:
+            log(f"  probe {method} {path}: err {str(ex)[:50]}")
+    if sl:
+        rows = parse_rows(sl)
+        hidden = [t for t, s2 in rows if s2 == "未顯示"]
+        normal = [t for t, s2 in rows if s2 == "正常"]
+        log(f"studyList 列 {len(rows)}：未顯示 {len(hidden)}｜正常 {len(normal)}")
+        led = OB.rj(OB.LEDGER, {}) or {}
+
+        def how_of(t):
+            for v in led.values():
+                tt = v.get("title", "")
+                if tt and t.lower().startswith(tt.lower()[:20]):
+                    return v.get("how")
+            return "?"
+
+        for t, s2 in rows[:22]:
+            log(f"  [{s2}] ({how_of(t)}) {t[:56]}")
+        # 每列的編輯/開關 href（⋮ 菜單或列內連結）——找 mediaid 相鄰的操作
+        mctx = []
+        for m in re.finditer(r"未顯示", sl):
+            mctx.append(sl[max(0, m.start() - 400):m.start() + 500])
+        if mctx:
+            log("── 『未顯示』列上下文（找開關端點）──")
+            log(re.sub(r"\s+", " ", mctx[0])[:700])
+    log("=== 偵查完畢 ===")
+    return
     # JS 轉義字串
     try:
         j = OB.retry(lambda: OB.requests.get(f"{OB.BASE}/js/common.min.js",
