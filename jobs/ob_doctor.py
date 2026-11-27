@@ -55,19 +55,38 @@ def art_fid():
 
 
 def force_channel_cover(ch):
-    """頻道封面強制重設（與 ensure_channel_cover 同形狀，但無 skip 檢查）。"""
+    """頻道封面強制重設——形狀探險（11-27 實證：分組用 channelId 形狀成功、id 被拒；
+    頻道 cover 我們從無成功形狀（tfs_engine 無 UpdatePrivateChannel；11-26 兩次 id 形狀
+    都 更新失败）。逐一嘗試＋每次以 re-fetch thumb!=default 驗證，中一即停。"""
     fid = art_fid()
     if not fid:
         log("  channel fix: feed art 不可得——跳過（下輪再試）")
         return False
-    r = OB.req("POST", f"{OB.BASE}/ting/UpdatePrivateChannel",
-               data={"id": ch["Id"], "name": ch.get("Name") or "",
-                     "thumb": fid, "channelType": ch.get("ChannelType") or "",
-                     "description": ch.get("Description") or ""}, timeout=60)
-    ok = r.status_code == 200 and '"success":false' not in (r.text or "")
-    after = next((c for c in get_chs() if c.get("Id") == ch["Id"]), {})
-    log(f"  channel fix: {r.status_code} {(r.text or '')[:50]} | thumb after={shape(after.get('Thumb'))}")
-    return ok
+    cid = ch["Id"]
+    variants = [
+        ("plain/channelId", f"{OB.BASE}/ting/UpdatePrivateChannel",
+         {"channelId": cid, "name": ch.get("Name") or "", "thumb": fid,
+          "channelType": ch.get("ChannelType") or "",
+          "description": ch.get("Description") or ""}),
+        ("plain/id", f"{OB.BASE}/ting/UpdatePrivateChannel",
+         {"id": cid, "name": ch.get("Name") or "", "thumb": fid,
+          "channelType": ch.get("ChannelType") or "",
+          "description": ch.get("Description") or ""}),
+        ("itemtype=7/channelId", f"{OB.BASE}/ting/UpdatePrivateChannel?itemtype=7",
+         {"channelId": cid, "name": ch.get("Name") or "", "thumb": fid,
+          "channelType": ch.get("ChannelType") or "",
+          "description": ch.get("Description") or ""}),
+    ]
+    for tag, url, data in variants:
+        r = OB.req("POST", url, data=data, timeout=60)
+        after = next((c for c in get_chs() if c.get("Id") == cid), {})
+        s_after = shape(after.get("Thumb"))
+        ok = r.status_code == 200 and '"success":false' not in (r.text or "") \
+            and s_after not in ("empty", "default")
+        log(f"  channel fix[{tag}]: {r.status_code} {(r.text or '')[:44]} | thumb after={s_after}")
+        if ok:
+            return True
+    return False
 
 
 def force_group_thumb(grp):
