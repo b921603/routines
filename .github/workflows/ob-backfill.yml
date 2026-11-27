@@ -56,6 +56,15 @@ jobs:
           NTFY_URL: ${{ secrets.NTFY_URL }}
           OB_BACKFILL: "1"
           OB_BACKFILL_MAX: "12"
+      - name: sort channel by episode date (drag-order automation; user 11-27)
+        if: success()
+        run: python jobs/ob_sort.py
+        env:
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
+          OB_CID: ${{ secrets.OB_CID }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
       - name: commit trail (channel+ledger+pit)
         if: always()
         run: |
