@@ -18,7 +18,8 @@ RULES = [
     (re.compile(r"\bcloning\b", re.I), "genetic modification"),
     (re.compile(r"\bMao\b"), "that era"),
 ]
-TARGET_KEYS = ("mao", "mollenkott", "zoloth")
+TARGET_KEYS = ("mao", "mollenkott", "zoloth",
+               "anchee", "turbulent")     # 標題已改寫，原鍵不再命中（11-27 實證）
 SCAN_WORDS = ("mao", "gay", "clon")
 
 
