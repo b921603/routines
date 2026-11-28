@@ -145,6 +145,7 @@ def main():
     grps = get_grps()
     log("── 分組層 ──")
     for g in grps:
+        log(f"  ALL-GROUP {g.get('Name')!r} id={g.get('Id')} n={g.get('TotalMediaCount')} thumb={shape(g.get('Thumb'))}")
         gid = g.get("Id") or ""
         tag = CURATED.get(gid[:8])
         is_ob = tag is None and (("being" in (g.get("Name") or "").lower())
@@ -178,10 +179,11 @@ def main():
                             "thumb": shape(c.get("Thumb"))}
                            for c in chs if c.get("Id") in cids]
         grps2 = get_grps()
-        rep["groups"] = [{"name": g.get("Name"),
+        rep["groups"] = [{"name": g.get("Name"), "id": g.get("Id"),
+                          "n": g.get("TotalMediaCount"),
                           "tag": CURATED.get((g.get("Id") or "")[:8], "OB"),
                           "thumb": shape(g.get("Thumb"))}
-                         for g in grps
+                         for g in grps2
                          if (g.get("Id") or "")[:8] in CURATED
                          or "being" in (g.get("Name") or "").lower()]
         rep["episodes"] = []

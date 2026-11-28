@@ -566,15 +566,23 @@ def _find_ob_group(gl):
     return None
 
 
+OB_GANCHOR = os.path.join(TRAIL, "ob_group.json")   # 分組錨定（真 gid；11-28 雙組事件教訓）
+
+
 def ensure_ob_group(cid):
     """tfs ensure_group 繼承（繼承審計缺口 F，11-26 用戶點名）：ob 頻道綁進分組。
     Eudic 分組＝ChannelType-2 頻道實體（CreatePrivateChannel?itemtype=7 →
-    AddChannelsToPrivateGroup{groupId,channelIds}）。只在缺綁時 POST（重綁會重排）。"""
+    AddChannelsToPrivateGroup{groupId,channelIds}）。只在缺綁時 POST（重綁會重排）。
+    11-28：分組以錨定 gid 為準（帳號出現雙 OB 組時啟發式會挑錯）；綁定驗證＝
+    TotalMediaCount 增量（分組物件無成員清單，只有計數）。"""
     try:
         gl = (req("POST", f"{BASE}/ting/GetPrivateGroups?withDefault=false",
                   data="", timeout=40).json()
               .get("channelList", {}).get("UploadedChannels", []))
-        grp = _find_ob_group(gl)
+        anchor = (rj(OB_GANCHOR, {}) or {}).get("gid") or ""
+        grp = next((c for c in gl if c.get("Id") == anchor), None) if anchor else None
+        if not grp:
+            grp = _find_ob_group(gl)
         if not grp:
             r = req("POST", f"{BASE}/ting/CreatePrivateChannel?itemtype=7",
                     data={"name": OB_GROUP, "thumb": "", "channelType": "2",
@@ -588,29 +596,29 @@ def ensure_ob_group(cid):
                 log("  group create failed — skip (retry next run)")
                 return
         gid = grp["Id"]
+        wj(OB_GANCHOR, {"gid": gid, "name": grp.get("Name") or "", "at": time.strftime("%F %T")})
+        n0 = grp.get("TotalMediaCount") or 0
         binds = set(rj(BINDS, []) or [])
         if cid in binds:
             log("  group bind: 已綁（binds 記錄）— skip")
             return
         r = req("POST", f"{BASE}/ting/AddChannelsToPrivateGroup",
                 data=[("groupId", gid), ("channelIds", cid)], timeout=60)
-        log(f"  group bind: {r.status_code} {(r.text or '')[:60]}")
-        # 成員驗證（11-28 教訓：只看 200 會把 success:false 也記成已綁＝永久 skip）
-        members = ""
-        try:
-            g2 = (req("POST", f"{BASE}/ting/GetPrivateGroups?withDefault=false",
-                      data="", timeout=40).json()
-                  .get("channelList", {}).get("UploadedChannels") or [])
-            members = json.dumps(next((g for g in g2 if g.get("Id") == gid), {}))
-        except Exception:
-            pass
+        log(f"  group bind→{grp.get('Name')!r}[{gid[:8]}] (n={n0}): {r.status_code} {(r.text or '')[:60]}")
+        # 驗證＝計數增量（分組物件只有 TotalMediaCount，無成員清單）
+        time.sleep(2)
+        g2 = (req("POST", f"{BASE}/ting/GetPrivateGroups?withDefault=false",
+                  data="", timeout=40).json()
+              .get("channelList", {}).get("UploadedChannels") or [])
+        n1 = next((g.get("TotalMediaCount") or 0 for g in g2 if g.get("Id") == gid), None)
         verified = r.status_code == 200 and '"success":false' not in (r.text or "") \
-                   and (not members or cid in members)
+                   and (n1 is not None and n1 > n0)
         if verified:
             binds.add(cid)
             wj(BINDS, sorted(binds))
+            log(f"  group bind: 驗證通過（n {n0}→{n1}）已記帳")
         else:
-            log(f"  group bind: 驗證未過（members={'?' if not members else ('in' if cid in members else 'OUT')}）——不記帳，下輪重試")
+            log(f"  group bind: 驗證未過（n {n0}→{n1}）——不記帳，下輪重試")
     except Exception as ex:
         log(f"  group err（非致命）: {str(ex)[:80]}")
 
