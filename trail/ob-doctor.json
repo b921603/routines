@@ -1,41 +1,46 @@
 {
- "at": "2026-11-27 04:54:57",
- "fix": false,
+ "at": "2026-11-28 15:55:49",
+ "fix": true,
  "channels": [
   {
+   "cid": "63de2485-3726-4b37-be23-9bb835d4e20f",
+   "name": "On Being with Krista Tippett 101-200",
+   "thumb": "url"
+  },
+  {
    "cid": "372fa0de-b091-4d19-89f8-571e3b33b546",
-   "name": "On Being with Krista Tippett",
-   "thumb": "url",
-   "head": "https://static.esdict.cn/UserMediaPool/ChannelImg/37"
+   "name": "On Being with Krista Tippett 001-100",
+   "thumb": "url"
   }
  ],
  "groups": [
   {
    "name": "On Being with Krista Tippett",
    "tag": "OB",
-   "thumb": "url",
-   "desc_len": 182
+   "thumb": "url"
   },
   {
    "name": "Tim Ferriss Show",
    "tag": "TFF",
-   "thumb": "url",
-   "desc_len": 196
+   "thumb": "url"
   },
   {
    "name": "How To Fail With Elizabeth Day",
    "tag": "HTF",
-   "thumb": "url",
-   "desc_len": 150
+   "thumb": "url"
   },
   {
    "name": "The Bulwark Daily",
    "tag": "BWK",
-   "thumb": "url",
-   "desc_len": 37
+   "thumb": "url"
   }
  ],
  "episodes": [
+  {
+   "cid": "63de2485-3726-4b37-be23-9bb835d4e20f",
+   "page0": 7,
+   "bare": 0
+  },
   {
    "cid": "372fa0de-b091-4d19-89f8-571e3b33b546",
    "page0": 20,
