@@ -1,0 +1,57 @@
+name: ting-ops
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "export=訂閱+分類匯出 / checkin=簽到狀態+簽到"
+        required: false
+        default: "checkin"
+      products:
+        description: "a=英语听力 b=西语听力（逗號分隔）"
+        required: false
+        default: "a,b"
+      post:
+        description: "未簽時真的 POST 簽到？1=是"
+        required: false
+        default: "1"
+  schedule:
+    # 每日 00:40 台北時間簽到（聽力當日累積後結算）
+    - cron: "40 16 * * *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ting-ops
+  cancel-in-progress: false
+
+jobs:
+  ops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: ting ops (${{ github.event.inputs.mode || 'checkin' }})
+        run: node jobs/ting_ops.cjs
+        env:
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          TING_MODE: ${{ github.event.inputs.mode || 'checkin' }}
+          TING_PRODUCTS: ${{ github.event.inputs.products || 'a,b' }}
+          TING_CHECKIN_POST: ${{ github.event.inputs.post || '1' }}
+          NTFY_URL: ${{ secrets.NTFY_URL }}
+      - name: commit trail
+        if: always()
+        run: |
+          git config user.name "ting-bot"
+          git config user.email "b921603@users.noreply.github.com"
+          git add trail/ting_*.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "ting ops trail [skip ci]"
+            git pull --rebase origin main || true
+            git push || (sleep 8 && git pull --rebase origin main && git push) || true
+          fi
