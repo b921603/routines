@@ -8,6 +8,11 @@ GitHub schedule 高載會直接丟班（11-26 丟 4 班、11-27 丟 07:30 班實
 防重：已有 queued/in_progress 的 ob-backfill run → 不補。
 """
 import os, sys, time, json
+# Windows runner（cron.yml runs-on windows-latest）主控台預設 cp1252——
+# 中文 log 會 UnicodeEncodeError（#36/#37 兩炸點：ob-pit.json 讀入＋stdout 寫出）
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 import requests
 
 API = "https://api.github.com"
