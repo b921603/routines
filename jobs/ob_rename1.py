@@ -20,9 +20,15 @@ log(f"現名: {cur.get('Name')!r}  thumb={cur.get('Thumb')!r}")
 if cur.get("Name") == NEW:
     log("已是目標名——僅同步登記簿")
 else:
+    thumb_url = cur.get("Thumb") or ""
+    fid = ""
+    if thumb_url:
+        img = OB.req("GET", thumb_url, timeout=60).content
+        fid = OB.upload_thumb(img)
+        log(f"封面重傳: {len(img)}B → fileId={fid}")
     r = OB.req("POST", f"{OB.BASE}/ting/UpdatePrivateChannel",
                data={"id": cur["Id"], "name": NEW,
-                     "thumb": cur.get("Thumb") or "",
+                     "thumb": fid,
                      "channelType": cur.get("ChannelType") or "",
                      "description": cur.get("Description") or ""}, timeout=60)
     flat = (r.text or "").replace(" ", "")
