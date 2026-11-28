@@ -168,13 +168,20 @@ async function opReward(sess, portal, tag) {
       out.checkin_detail = { dayIndex: di, http: ck.code, body: X.jparse(ck.text) };
       if (ck.code === 200) break;
     }
+    // studyplan 簽到狀態（閱讀計畫的本體）
+    const sp = await g('/api/v5/getstudyplancheckIn?planType=0');
+    out.studyplan_checkin = { http: sp.code, body: X.jparse(sp.text) };
     if (process.env.TING_SHARE_POST === '1') {
-      await X.sleep(800);
-      const di = dayIdx[0] || '1';
-      const rel = `/api/v5/ting/UpdateJingTingShareStatus?bookId=${realBook}&dayIndex=${di}`;
-      const p = await callPortal(portal, 'POST', rel, null, X.hdrs(u, rel, cred, shape));
-      console.log(`[${tag}] UpdateJingTingShareStatus(book=${realBook.slice(0, 8)},day=${di}) → ${p.code} ${p.text.slice(0, 400)}`);
-      out.share_post = { code: p.code, body: X.jparse(p.text) };
+      // dayIndex 格式掃描（404=無害；中 200 即鎖定格式）
+      out.share_post = [];
+      for (const di of dayIdx.length ? dayIdx : ['1', '2', '8', '1-2', '0']) {
+        await X.sleep(500);
+        const rel = `/api/v5/ting/UpdateJingTingShareStatus?bookId=${realBook}&dayIndex=${di}`;
+        const p = await callPortal(portal, 'POST', rel, null, X.hdrs(u, rel, cred, shape));
+        console.log(`[${tag}] share(book=${realBook.slice(0, 8)},day=${di}) → ${p.code} ${p.text.slice(0, 200)}`);
+        out.share_post.push({ dayIndex: di, code: p.code, body: p.text.slice(0, 200) });
+        if (p.code === 200) break;
+      }
     } else {
       out.share_post = 'skipped (TING_SHARE_POST 未開)';
     }
