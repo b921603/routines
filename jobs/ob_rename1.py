@@ -25,8 +25,9 @@ else:
                      "thumb": cur.get("Thumb") or "",
                      "channelType": cur.get("ChannelType") or "",
                      "description": cur.get("Description") or ""}, timeout=60)
-    ok = '"success":true' in (r.text or "").replace(" ", "")
-    log(f"UpdatePrivateChannel: HTTP {r.status_code} {ok}")
+    flat = (r.text or "").replace(" ", "")
+    ok = ('"success":true' in flat) or ('"code":200' in flat) or ('"code":0' in flat)
+    log(f"UpdatePrivateChannel: HTTP {r.status_code} ok={ok} raw={(r.text or '')[:120]}")
     if not ok:
         sys.exit(1)
 chans2 = OB.req("GET", f"{OB.BASE}/ting/GetPrivateChannels", timeout=45).json()
