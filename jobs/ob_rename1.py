@@ -23,7 +23,8 @@ else:
     thumb_url = cur.get("Thumb") or ""
     fid = ""
     if thumb_url:
-        img = OB.req("GET", thumb_url, timeout=60).content
+        img = OB.requests.get(thumb_url, timeout=60).content   # static CDN：plain GET（session/auth 檢查會耗盡）
+        log(f"封面下載: {len(img)}B")
         fid = OB.upload_thumb(img)
         log(f"封面重傳: {len(img)}B → fileId={fid}")
     r = OB.req("POST", f"{OB.BASE}/ting/UpdatePrivateChannel",
