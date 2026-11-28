@@ -27,10 +27,11 @@ else:
         log(f"封面下載(feed logo): {len(img)}B")
         fid = OB.upload_thumb(img)
         log(f"封面重傳: {len(img)}B → fileId={fid}")
+    # JS 實證 payload：channelId（非 id）＋thumb（fileId 剝 /uploads/ 前綴）——
+    # 對照組實證 id 形狀回「更新失败，联系客服」，channelId 形狀 success:true
     r = OB.req("POST", f"{OB.BASE}/ting/UpdatePrivateChannel",
-               data={"id": cur["Id"], "name": NEW,
-                     "thumb": fid,
-                     "channelType": cur.get("ChannelType") or "",
+               data={"channelId": cur["Id"], "name": NEW,
+                     "thumb": (fid or "").replace("/uploads/", ""),
                      "description": cur.get("Description") or ""}, timeout=60)
     flat = (r.text or "").replace(" ", "")
     ok = ('"success":true' in flat) or ('"code":200' in flat) or ('"code":0' in flat)
