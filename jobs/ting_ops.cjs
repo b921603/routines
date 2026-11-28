@@ -92,34 +92,50 @@ async function opExport(sess, portal, tag) {
   const out = {};
   const subs = await callPortal(portal, 'GET', '/api/v5/ting/subscribecollections', null,
     H('/api/v5/ting/subscribecollections'));
-  console.log(`[${tag}] subscribecollections: ${subs.code} ${subs.text.slice(0, 300)}`);
   const sj = X.jparse(subs.text) || {};
   const cols = sj.collections || [];
-  // 整理成乾淨樹：收藏夾 → 頻道
-  const tree = cols.map((c) => ({
-    collection: c.name || c.title || '',
-    collection_id: c.id || c.collection_id || '',
-    channel_count: (c.channels || []).length,
-    channels: (c.channels || []).map((ch) => ({
-      name: ch.name || ch.title || '',
-      id: ch.id || ch.uuid || '',
-      subscribed: ch.subscribed,
-      article_count: ch.article_count !== undefined ? ch.article_count : (ch.count !== undefined ? ch.count : undefined),
-      category: ch.category_name || ch.category || undefined,
-    })),
-  }));
-  out.subscription_tree = tree;
-  // 每收藏夾試 channelgroup/{id}（分類樹端點，best-effort）
-  out.channelgroups = {};
-  for (const c of cols) {
-    const cid = c.id || c.collection_id;
-    if (!cid) continue;
-    await X.sleep(350);
-    const r = await callPortal(portal, 'GET', `/api/v5/ting/channelgroup/${cid}`, null, H(`/api/v5/ting/channelgroup/${cid}`));
-    console.log(`[${tag}] channelgroup/${cid.slice(0, 8)} → ${r.code} ${r.text.slice(0, 200)}`);
-    out.channelgroups[cid] = r.code === 200 ? X.jparse(r.text) : { http: r.code };
+  if (cols[0]) {
+    console.log(`[${tag}] collection[0] keys=${JSON.stringify(Object.keys(cols[0]))} ` +
+      `id欄=${JSON.stringify({ id: cols[0].id, uuid: cols[0].uuid, collection_id: cols[0].collection_id })} ` +
+      `name=${JSON.stringify(cols[0].name || cols[0].title)} channels=${(cols[0].channels || []).length}`);
   }
-  const n = tree.reduce((a, t) => a + t.channel_count, 0);
+  const flat = await callPortal(portal, 'GET', '/api/v5/ting/subscribes', null, H('/api/v5/ting/subscribes'));
+  console.log(`[${tag}] subscribes: ${flat.code} ${flat.text.slice(0, 350)}`);
+  out.subscribes_flat = X.jparse(flat.text);
+  const tree = [];
+  for (const c of cols) {
+    const cid = c.id || c.uuid || c.collection_id || '';
+    const entry = { collection: c.name || c.title || '', collection_id: cid,
+                    via: '', channels: [] };
+    if (cid) {
+      const tries = [
+        `/api/v5/ting/channelgroups/${cid}/0?pagesize=200`,
+        `/api/v5/ting/channelgroup/${cid}`,
+        `/api/v5/ting/subscribecollection/${cid}`,
+      ];
+      for (const rel of tries) {
+        await X.sleep(300);
+        const r = await callPortal(portal, 'GET', rel, null, H(rel));
+        const j = r.code === 200 ? X.jparse(r.text) : null;
+        const chans = j ? (j.channels || j.items || j.list ||
+                          (Array.isArray(j) ? j : null)) : null;
+        console.log(`[${tag}] ${rel.replace('/api/v5/ting/', '').slice(0, 58)} → ${r.code}` +
+          (chans && chans.length ? ` ${chans.length} items` : (r.code !== 200 ? ' ' + r.text.slice(0, 60) : '')));
+        if (Array.isArray(chans) && chans.length) {
+          entry.channels = chans.map((ch) => ({
+            name: ch.name || ch.title || '',
+            id: ch.id || ch.uuid || '',
+            subscribed: ch.subscribed,
+          }));
+          entry.via = rel.replace('/api/v5/ting/', '').split('?')[0];
+          break;
+        }
+      }
+    }
+    tree.push(entry);
+  }
+  out.subscription_tree = tree;
+  const n = tree.reduce((a, t) => a + t.channels.length, 0);
   console.log(`[${tag}] 匯出完成：${tree.length} 收藏夾 / ${n} 頻道`);
   return out;
 }
@@ -245,7 +261,8 @@ async function main() {
     if (!v) return `${k}:null`;
     if (v.error) return `${k}:登入失敗`;
     if (MODE === 'checkin') return `${k}:GET${v.get_code}${v.checked_in_today === undefined ? '' : v.checked_in_today ? '已簽' : '未簽'}${v.post_code ? '→POST' + v.post_code : ''}`;
-    return `${k}:訂閱${v.subscriptions_raw ? '✓' : '✗'}分類${v.channelgroup_raw ? '✓' : '✗'}`;
+    const tr = v.subscription_tree || [];
+    return `${k}:${tr.length}夾/${tr.reduce((a, t) => a + t.channels.length, 0)}頻道`;
   }).join('｜');
   console.log('SUMMARY ' + brief);
   await X.notify(`Ting ${MODE}: ${brief}`, '');
