@@ -1,0 +1,84 @@
+{
+ "at": "2026-11-28T07:55:19.005Z",
+ "mode": "checkin",
+ "results": {
+  "a": {
+   "get_code": 200,
+   "get_body": {
+    "count": 429,
+    "continuous": 9,
+    "goldcount": 13880,
+    "ischeckin": true,
+    "checkin_date": "2026-11-28",
+    "checkins": [
+     "2026-11-28",
+     "2026-11-27",
+     "2026-11-26",
+     "2026-11-25",
+     "2026-11-24",
+     "2026-11-23",
+     "2026-11-22",
+     "2026-11-21"
+    ],
+    "tip_items": [
+     {
+      "title": "今日已获得 10 积分",
+      "item_action": 5,
+      "excerpt": "给爱学习的你点赞，请继续加油哦",
+      "image_url_thumbnail": "https://static.eudic.net/app/res/gold.png",
+      "source_url": "https://dict.eudic.net/account/gold?userid={userid}&useragent={useragent}"
+     },
+     {
+      "title": "继续打卡 71 天",
+      "item_action": 43,
+      "excerpt": "可获得 星火长明 徽章",
+      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/b8440711-61e1-4fcd-b806-641c2d63ff52.png",
+      "source_url": null
+     }
+    ],
+    "tip_activity": null,
+    "checkin_reward_config": null
+   },
+   "checked_in_today": true
+  },
+  "b": {
+   "get_code": 200,
+   "get_body": {
+    "count": 446,
+    "continuous": 21,
+    "goldcount": 16430,
+    "ischeckin": true,
+    "checkin_date": "2026-11-28",
+    "checkins": [
+     "2026-11-28",
+     "2026-11-27",
+     "2026-11-26",
+     "2026-11-25",
+     "2026-11-24",
+     "2026-11-23",
+     "2026-11-22",
+     "2026-11-21"
+    ],
+    "tip_items": [
+     {
+      "title": "今日已获得 10 积分",
+      "item_action": 5,
+      "excerpt": "给爱学习的你点赞，请继续加油哦",
+      "image_url_thumbnail": "https://static.eudic.net/app/res/gold.png",
+      "source_url": "https://www.esdict.cn/account/gold?userid={userid}&useragent={useragent}"
+     },
+     {
+      "title": "继续打卡 54 天",
+      "item_action": 43,
+      "excerpt": "可获得 星火长明 徽章",
+      "image_url_thumbnail": "http://static.frdic.com/MediaPool/ChannelImg/b8440711-61e1-4fcd-b806-641c2d63ff52.png",
+      "source_url": null
+     }
+    ],
+    "tip_activity": null,
+    "checkin_reward_config": null
+   },
+   "checked_in_today": true
+  }
+ }
+}
