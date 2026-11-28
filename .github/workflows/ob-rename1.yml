@@ -1,0 +1,32 @@
+name: ob-rename1
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  rename:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests pyyaml pillow
+      - run: python jobs/ob_rename1.py
+        env:
+          SVC_USER: ${{ secrets.SVC_USER }}
+          SVC_PASS: ${{ secrets.SVC_PASS }}
+          PODCAST_COOKIE: ${{ secrets.PODCAST_COOKIE }}
+          OB_CID: ${{ secrets.OB_CID }}
+      - name: commit trail
+        if: always()
+        run: |
+          git config user.name "ob-bot"
+          git config user.email "b921603@users.noreply.github.com"
+          git add trail/ob_channels.json trail/ob_channel.json 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "ob rename: first channel visual alignment [skip ci]"
+            git pull --rebase origin main || true
+            git push || (sleep 8 && git pull --rebase origin main && git push) || true
+          fi

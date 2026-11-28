@@ -29,7 +29,7 @@ def log(m):
 
 
 def main():
-    pit = json.load(open("trail/ob-pit.json")) if os.path.exists("trail/ob-pit.json") else {}
+    pit = json.load(open("trail/ob-pit.json", encoding="utf-8")) if os.path.exists("trail/ob-pit.json") else {}
     if pit.get("status") == "complete":
         log("ob 補完已竟——守衛休息")
         return
