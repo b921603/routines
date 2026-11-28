@@ -100,6 +100,47 @@ async function opExport(sess, portal, tag) {
   return out;
 }
 
+// 精聽學習計畫獎勵偵察：todayplan→bookId/dayIndex→簽到狀態→分享資訊→（閘門）分享回報
+async function opReward(sess, portal, tag) {
+  const { u, cred } = sess;
+  const shape = await X.lockShape(u, cred);
+  if (!shape) { console.log(`[${tag}] lockShape 全滅`); return null; }
+  const g = async (rel) => {
+    const r = await callPortal(portal, 'GET', rel, null, X.hdrs(u, rel, cred, shape));
+    console.log(`[${tag}] GET ${rel.slice(0, 70)} → ${r.code} ${r.text.slice(0, 500)}`);
+    return r;
+  };
+  const out = {};
+  const tp = await g('/api/v5/ting/todayplan');
+  out.todayplan = X.jparse(tp.text);
+  const ej = await g('/api/v5/ting/eicojingtinghomepage');
+  out.jt_home = X.jparse(ej.text);
+  // 從 todayplan/jt_home 挖 bookId/dayIndex
+  const blob = JSON.stringify(out);
+  const bookIds = [...new Set((blob.match(/"book_id"\s*:\s*"([0-9a-f-]{36})"/) || []).slice(1)
+    .concat([...blob.matchAll(/"bookId"\s*:\s*"([0-9a-f-]{36})"/g)].map(m => m[1])))];
+  const dayIdx = [...new Set([...blob.matchAll(/"day_?[Ii]ndex"\s*:\s*(\d+)/g)].map(m => m[1]))];
+  out.detected = { bookIds, dayIdx };
+  console.log(`[${tag}] detected bookIds=${JSON.stringify(bookIds)} dayIdx=${JSON.stringify(dayIdx)}`);
+  if (bookIds[0]) {
+    const bid = bookIds[0], di = dayIdx[0] || '1';
+    const ck = await g(`/api/v5/ting/GetJingTingCheckIn?bookId=${bid}&dayIndex=${di}`);
+    out.checkin_detail = X.jparse(ck.text);
+    const si = await g(`/api/v5/ting/jingtingshareinfo?bookId=${bid}&dayIndex=${di}`);
+    out.shareinfo = X.jparse(si.text);
+    if (process.env.TING_SHARE_POST === '1') {
+      await X.sleep(800);
+      const rel = `/api/v5/ting/UpdateJingTingShareStatus?bookId=${bid}&dayIndex=${di}`;
+      const p = await callPortal(portal, 'POST', rel, null, X.hdrs(u, rel, cred, shape));
+      console.log(`[${tag}] UpdateJingTingShareStatus → ${p.code} ${p.text.slice(0, 400)}`);
+      out.share_post = { code: p.code, body: X.jparse(p.text) };
+    } else {
+      out.share_post = 'skipped (TING_SHARE_POST 未開)';
+    }
+  }
+  return out;
+}
+
 async function opCheckin(sess, portal, tag) {
   const { u, cred } = sess;
   const shape = await X.lockShape(u, cred);
@@ -143,7 +184,9 @@ async function main() {
     console.log(`[${tag}] login OK via ${new URL(portalUsed).host} userid=${sess.cred.user}`);
     results[id] = MODE === 'export'
       ? await opExport(sess, portalUsed, tag)
-      : await opCheckin(sess, portalUsed, tag);
+      : MODE === 'reward'
+        ? await opReward(sess, portalUsed, tag)
+        : await opCheckin(sess, portalUsed, tag);
   }
   fs.writeFileSync(path.join(__dirname, '..', 'trail', `ting_${MODE}.json`),
     JSON.stringify({ at: new Date().toISOString(), mode: MODE, results }, null, 1));
