@@ -147,17 +147,33 @@ async function opReward(sess, portal, tag) {
   const dayIdx = [...new Set([...blob.matchAll(/"(?:day_?[Ii]ndex|period_?[Ii]ndex|current_?day)"\s*:\s*"?([0-9]+)"?/g)].map(m => m[1]))];
   out.detected = { bookIds, dayIdx };
   console.log(`[${tag}] detected bookIds=${JSON.stringify(bookIds)} dayIdx=${JSON.stringify(dayIdx)}`);
-  if (bookIds[0]) {
-    const bid = bookIds[0], di = dayIdx[0] || '1';
-    const ck = await g(`/api/v5/ting/GetJingTingCheckIn?bookId=${bid}&dayIndex=${di}`);
-    out.checkin_detail = X.jparse(ck.text);
-    const si = await g(`/api/v5/ting/jingtingshareinfo?bookId=${bid}&dayIndex=${di}`);
-    out.shareinfo = X.jparse(si.text);
+  // shareinfo 逐 bookId 試探（200＋含 user 卡＝真書）
+  let realBook = null;
+  for (const bid of bookIds.slice(0, 6)) {
+    await X.sleep(300);
+    const si = await g(`/api/v5/ting/jingtingshareinfo?bookId=${bid}&dayIndex=1`);
+    const sj = X.jparse(si.text);
+    if (si.code === 200 && sj && sj.user && sj.date) {
+      realBook = bid;
+      out.shareinfo = sj;
+      out.real_book = { bookId: bid, desc: sj.desc, date: sj.date, attachs: sj.attachs };
+      console.log(`[${tag}] 真書鎖定: ${bid} (${sj.desc})`);
+      break;
+    }
+  }
+  if (realBook) {
+    for (const di of dayIdx.length ? dayIdx : ['1']) {
+      await X.sleep(300);
+      const ck = await g(`/api/v5/ting/GetJingTingCheckIn?bookId=${realBook}&dayIndex=${di}`);
+      out.checkin_detail = { dayIndex: di, http: ck.code, body: X.jparse(ck.text) };
+      if (ck.code === 200) break;
+    }
     if (process.env.TING_SHARE_POST === '1') {
       await X.sleep(800);
-      const rel = `/api/v5/ting/UpdateJingTingShareStatus?bookId=${bid}&dayIndex=${di}`;
+      const di = dayIdx[0] || '1';
+      const rel = `/api/v5/ting/UpdateJingTingShareStatus?bookId=${realBook}&dayIndex=${di}`;
       const p = await callPortal(portal, 'POST', rel, null, X.hdrs(u, rel, cred, shape));
-      console.log(`[${tag}] UpdateJingTingShareStatus → ${p.code} ${p.text.slice(0, 400)}`);
+      console.log(`[${tag}] UpdateJingTingShareStatus(book=${realBook.slice(0, 8)},day=${di}) → ${p.code} ${p.text.slice(0, 400)}`);
       out.share_post = { code: p.code, body: X.jparse(p.text) };
     } else {
       out.share_post = 'skipped (TING_SHARE_POST 未開)';
