@@ -144,7 +144,7 @@ async function opReward(sess, portal, tag) {
   // 從 todayplan/jt_home 挖 bookId/dayIndex
   const blob = JSON.stringify(out);
   const bookIds = [...new Set([...blob.matchAll(/"(?:book_?[Ii]d|uuid)"\s*:\s*"([0-9a-f-]{36})"/g)].map(m => m[1]))];
-  const dayIdx = [...new Set([...blob.matchAll(/"(?:day_?[Ii]ndex|period_?[Ii]ndex|current_?day)"\s*:\s*"?([0-9]+)"?/g)].map(m => m[1])))];
+  const dayIdx = [...new Set([...blob.matchAll(/"(?:day_?[Ii]ndex|period_?[Ii]ndex|current_?day)"\s*:\s*"?([0-9]+)"?/g)].map(m => m[1]))];
   out.detected = { bookIds, dayIdx };
   console.log(`[${tag}] detected bookIds=${JSON.stringify(bookIds)} dayIdx=${JSON.stringify(dayIdx)}`);
   if (bookIds[0]) {
