@@ -139,11 +139,12 @@ async function opReward(sess, portal, tag) {
   out.todayplan = X.jparse(tp.text);
   const ej = await g('/api/v5/ting/eicojingtinghomepage');
   out.jt_home = X.jparse(ej.text);
+  const pd = await g('/api/v5/jingting/purchased');
+  out.purchased = X.jparse(pd.text);
   // 從 todayplan/jt_home 挖 bookId/dayIndex
   const blob = JSON.stringify(out);
-  const bookIds = [...new Set((blob.match(/"book_id"\s*:\s*"([0-9a-f-]{36})"/) || []).slice(1)
-    .concat([...blob.matchAll(/"bookId"\s*:\s*"([0-9a-f-]{36})"/g)].map(m => m[1])))];
-  const dayIdx = [...new Set([...blob.matchAll(/"day_?[Ii]ndex"\s*:\s*(\d+)/g)].map(m => m[1]))];
+  const bookIds = [...new Set([...blob.matchAll(/"(?:book_?[Ii]d|uuid)"\s*:\s*"([0-9a-f-]{36})"/g)].map(m => m[1])))];
+  const dayIdx = [...new Set([...blob.matchAll(/"(?:day_?[Ii]ndex|period_?[Ii]ndex|current_?day)"\s*:\s*"?([0-9]+)"?/g)].map(m => m[1])))];
   out.detected = { bookIds, dayIdx };
   console.log(`[${tag}] detected bookIds=${JSON.stringify(bookIds)} dayIdx=${JSON.stringify(dayIdx)}`);
   if (bookIds[0]) {
