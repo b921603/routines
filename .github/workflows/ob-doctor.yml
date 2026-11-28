@@ -8,6 +8,10 @@ on:
         description: "修復模式：重設頻道/分組封面＋補裸圖"
         type: boolean
         default: false
+      probe:
+        description: "分組綁定深診斷"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,6 +37,7 @@ jobs:
           OB_CID: ${{ secrets.OB_CID }}
           NTFY_URL: ${{ secrets.NTFY_URL }}
           DOCTOR_FIX: ${{ inputs.fix && '1' || '0' }}
+          DOCTOR_PROBE: ${{ inputs.probe && '1' || '0' }}
         run: python jobs/ob_doctor.py
       - name: commit doctor report
         if: always()

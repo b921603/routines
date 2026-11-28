@@ -114,6 +114,11 @@ def force_group_thumb(grp):
 
 
 def main():
+    if os.environ.get("DOCTOR_PROBE") == "1":
+        log("=== PROBE 模式：分組綁定深診斷 ===")
+        import ob_bindprobe
+        ob_bindprobe.main()
+        return
     log(f"=== OB 封面體檢（fix={FIX}）===")
     OB.login()
     rep = {"at": time.strftime("%F %T"), "fix": FIX,
