@@ -43,6 +43,7 @@ jobs:
           TING_MODE: ${{ github.event.inputs.mode || 'checkin' }}
           TING_PRODUCTS: ${{ github.event.inputs.products || 'a,b' }}
           TING_CHECKIN_POST: ${{ github.event.inputs.post || '1' }}
+          TING_SHARE_POST: ${{ github.event.inputs.post || '1' }}
           NTFY_URL: ${{ secrets.NTFY_URL }}
       - name: commit trail
         if: always()

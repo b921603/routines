@@ -88,15 +88,39 @@ async function opExport(sess, portal, tag) {
   const { u, cred } = sess;
   const shape = await X.lockShape(u, cred);
   if (!shape) { console.log(`[${tag}] lockShape 全滅——簽名形狀待對齊`); return null; }
+  const H = (rel) => X.hdrs(u, rel, cred, shape);
   const out = {};
   const subs = await callPortal(portal, 'GET', '/api/v5/ting/subscribecollections', null,
-    X.hdrs(u, '/api/v5/ting/subscribecollections', cred, shape));
-  console.log(`[${tag}] subscribecollections: ${subs.code} ${subs.text.slice(0, 400)}`);
-  out.subscriptions_raw = X.jparse(subs.text);
-  const cg = await callPortal(portal, 'GET', '/api/v5/ting/channelgroup/', null,
-    X.hdrs(u, '/api/v5/ting/channelgroup/', cred, shape));
-  console.log(`[${tag}] channelgroup: ${cg.code} ${cg.text.slice(0, 400)}`);
-  out.channelgroup_raw = X.jparse(cg.text);
+    H('/api/v5/ting/subscribecollections'));
+  console.log(`[${tag}] subscribecollections: ${subs.code} ${subs.text.slice(0, 300)}`);
+  const sj = X.jparse(subs.text) || {};
+  const cols = sj.collections || [];
+  // 整理成乾淨樹：收藏夾 → 頻道
+  const tree = cols.map((c) => ({
+    collection: c.name || c.title || '',
+    collection_id: c.id || c.collection_id || '',
+    channel_count: (c.channels || []).length,
+    channels: (c.channels || []).map((ch) => ({
+      name: ch.name || ch.title || '',
+      id: ch.id || ch.uuid || '',
+      subscribed: ch.subscribed,
+      article_count: ch.article_count !== undefined ? ch.article_count : (ch.count !== undefined ? ch.count : undefined),
+      category: ch.category_name || ch.category || undefined,
+    })),
+  }));
+  out.subscription_tree = tree;
+  // 每收藏夾試 channelgroup/{id}（分類樹端點，best-effort）
+  out.channelgroups = {};
+  for (const c of cols) {
+    const cid = c.id || c.collection_id;
+    if (!cid) continue;
+    await X.sleep(350);
+    const r = await callPortal(portal, 'GET', `/api/v5/ting/channelgroup/${cid}`, null, H(`/api/v5/ting/channelgroup/${cid}`));
+    console.log(`[${tag}] channelgroup/${cid.slice(0, 8)} → ${r.code} ${r.text.slice(0, 200)}`);
+    out.channelgroups[cid] = r.code === 200 ? X.jparse(r.text) : { http: r.code };
+  }
+  const n = tree.reduce((a, t) => a + t.channel_count, 0);
+  console.log(`[${tag}] 匯出完成：${tree.length} 收藏夾 / ${n} 頻道`);
   return out;
 }
 
