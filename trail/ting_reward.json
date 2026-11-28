@@ -1,5 +1,5 @@
 {
- "at": "2026-11-28T08:00:00.523Z",
+ "at": "2026-11-28T08:08:40.843Z",
  "mode": "reward",
  "results": {
   "a": {
@@ -51,7 +51,115 @@
     "purchased_courses": [],
     "recommend_courses": [
      {
-      "book_id": "99059e5e-0542-4a59-bb51-67ea6ff1b94d",
+      "book_id": "7829eb4d-a420-46b8-96c7-af10884758e0",
+      "purchased": false,
+      "learning_days": 0,
+      "purchased_time": null,
+      "secondary_type": 0,
+      "vocabulary": 4300,
+      "vocab_tags": [],
+      "lexile": 0,
+      "parental_control": false,
+      "subscribed": null,
+      "area": 0,
+      "display_big_pic": false,
+      "display_style": 0,
+      "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
+      "excerpt": "免费永久答疑服务，有问必答\r\n赠独创10000字英语宝典《如何看美剧学英语》\r\n\r\n加我微信：zimuzu",
+      "create_time": "2025-11-28T21:40:00Z",
+      "update_time": "2025-11-28T21:40:00Z",
+      "sort_time": "2023-04-24T20:47:36Z",
+      "child_count": 25,
+      "download_count": 151143,
+      "purchase_type": 256,
+      "user_purchase_status": 0,
+      "file_size": 4366515651,
+      "tags": [
+       "中级",
+       "双语",
+       "测评",
+       "视频讲义"
+      ],
+      "scm": "",
+      "author_info": {
+       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/5e9ee58c-a663-11e5-b2ce-000c29ffef9b",
+       "user_id": "5e9ee58c-a663-11e5-b2ce-000c29ffef9b",
+       "nick_name": "大风哥Wind",
+       "gender": null
+      },
+      "has_handout": false,
+      "word_count": 10672,
+      "uuid": "7829eb4d-a420-46b8-96c7-af10884758e0",
+      "title": "看电影《时空恋旅人》学英语",
+      "language": "en",
+      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=7829eb4d-a420-46b8-96c7-af10884758e0&needlogin=true&purchaseactivity=jingting&timezone={timezone}&skiptheme=true&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}",
+      "item_type": 1,
+      "item_action": 10,
+      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/7119c68f-99f5-4019-9339-7671d91837b3.jpg?stamp=1683672000000",
+      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/80fa7177-4ef1-4ea7-a021-a70b559906a3.jpg?stamp=1683672000000"
+     },
+     {
+      "book_id": "e3216274-8167-11eb-9f05-00505686c5e6",
+      "purchased": false,
+      "learning_days": 0,
+      "purchased_time": null,
+      "secondary_type": 0,
+      "vocabulary": 7300,
+      "vocab_tags": [
+       {
+        "name": "中高考词汇",
+        "count": 690
+       },
+       {
+        "name": "四六级词汇",
+        "count": 1896
+       },
+       {
+        "name": "考研词汇",
+        "count": 484
+       },
+       {
+        "name": "出国留学词汇",
+        "count": 106
+       }
+      ],
+      "lexile": 0,
+      "parental_control": false,
+      "subscribed": null,
+      "area": 0,
+      "display_big_pic": false,
+      "display_style": 0,
+      "parent_uuid": "8a695f40-1da1-11e6-bcc9-000c29ffef9b",
+      "excerpt": "取材自《国家地理》英文原版期刊及官网，集文化、自然、旅游、科学4大主题。地道美音原文朗读+生动双语精讲，带你紧跟知识前沿的同时，轻松提升英语表达。",
+      "create_time": "2025-11-28T16:32:40Z",
+      "update_time": "2025-11-28T16:32:40Z",
+      "sort_time": "2021-03-10T13:14:38Z",
+      "child_count": 40,
+      "download_count": 6503,
+      "purchase_type": 512,
+      "user_purchase_status": 0,
+      "file_size": 227021947,
+      "tags": [],
+      "scm": "",
+      "author_info": {
+       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/9a707a51-9779-11eb-bb28-005056869af6",
+       "user_id": "9a707a51-9779-11eb-bb28-005056869af6",
+       "nick_name": "md@ngworld.cn",
+       "gender": null
+      },
+      "has_handout": false,
+      "word_count": 3421,
+      "uuid": "e3216274-8167-11eb-9f05-00505686c5e6",
+      "title": "国家地理·百科精读（第二期）",
+      "language": "en",
+      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=e3216274-8167-11eb-9f05-00505686c5e6&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
+      "item_type": 1,
+      "item_action": 10,
+      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/fb9a29a5-08e5-449f-a4a2-b6464fd9dc0a.jpg?stamp=1620840760860",
+      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/ef3f0d0b-b1a7-4529-ac88-2448859e1c1a.jpg?stamp=1620840760860"
+     },
+     {
+      "book_id": "13d3d2eb-d165-410f-8579-4e0528f3ee55",
       "purchased": false,
       "learning_days": 0,
       "purchased_time": null,
@@ -65,11 +173,54 @@
       "display_big_pic": false,
       "display_style": 0,
       "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
-      "excerpt": "精选Wanderer老师主讲的「精听党丨每日外刊」30篇（选材范围：2022年3月-2022年7月）。精讲英语主流外刊文章，外教带读+语音干货讲义+每日习题巩固，带你一起学用英语思维读外刊😉",
-      "create_time": "2025-11-28T22:54:15Z",
-      "update_time": "2025-11-28T22:54:15Z",
-      "sort_time": "2022-12-23T22:54:15Z",
-      "child_count": 30,
+      "excerpt": "涵盖听、说、读、写、发音、词汇的一套可以复制的成功学习方法论，让你快速、高效学好英语。",
+      "create_time": "2025-11-28T09:48:35Z",
+      "update_time": "2025-11-28T09:48:35Z",
+      "sort_time": "2023-01-07T16:50:07Z",
+      "child_count": 7,
+      "download_count": 154700,
+      "purchase_type": 512,
+      "user_purchase_status": 0,
+      "file_size": 692911515,
+      "tags": [],
+      "scm": "",
+      "author_info": {
+       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/47d8c8f9-3021-11e9-842e-00505686c5e6",
+       "user_id": "47d8c8f9-3021-11e9-842e-00505686c5e6",
+       "nick_name": "早说英语",
+       "gender": null
+      },
+      "has_handout": false,
+      "word_count": 2894,
+      "uuid": "13d3d2eb-d165-410f-8579-4e0528f3ee55",
+      "title": "可复制的高效英语学习法",
+      "language": "en",
+      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=13d3d2eb-d165-410f-8579-4e0528f3ee55&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
+      "item_type": 1,
+      "item_action": 10,
+      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/691aa1dd-f284-47a2-8536-033be8530ce9.jpg?stamp=1675766915134",
+      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/fdb3ae70-cedb-49ee-bf3a-7126bfc6baf8.jpg?stamp=1675766915134"
+     },
+     {
+      "book_id": "d01e4bf0-3922-11eb-9e86-00505686c5e6",
+      "purchased": false,
+      "learning_days": 0,
+      "purchased_time": null,
+      "secondary_type": 0,
+      "vocabulary": 0,
+      "vocab_tags": [],
+      "lexile": 0,
+      "parental_control": false,
+      "subscribed": null,
+      "area": 0,
+      "display_big_pic": false,
+      "display_style": 0,
+      "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
+      "excerpt": "2020年度英语主流外刊文章TOP100精选，外教带读+语音干货讲义+每日习题巩固。回顾2020全年新闻热点，全方位了解英语世界，积累最地道的词汇和表达，一起学用英语思维读外刊😉\r\n\r\n课程内容答疑交流，请添加客服公众号：WorldWorld3",
+      "create_time": "2025-11-28T14:06:49Z",
+      "update_time": "2025-11-27T23:00:00Z",
+      "sort_time": "2020-12-08T13:58:45Z",
+      "child_count": 100,
       "download_count": 0,
       "purchase_type": 256,
       "user_purchase_status": 0,
@@ -87,134 +238,14 @@
        "gender": null
       },
       "has_handout": false,
-      "uuid": "99059e5e-0542-4a59-bb51-67ea6ff1b94d",
-      "title": "大学英语_外刊精读 | Wanderer选集_第五季",
+      "uuid": "d01e4bf0-3922-11eb-9e86-00505686c5e6",
+      "title": "大学英语_外刊精读 | 2020年度TOP100精选",
       "language": "en",
-      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=99059e5e-0542-4a59-bb51-67ea6ff1b94d&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
+      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=d01e4bf0-3922-11eb-9e86-00505686c5e6&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
       "item_type": 1,
       "item_action": 10,
-      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/db0de009-00b7-4e07-a7eb-0fb858b9951f.jpg?stamp=1671839655000",
-      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/16a2a458-48bf-46eb-b8e7-81b5aebea6dd.jpg?stamp=1671839655000"
-     },
-     {
-      "book_id": "08004ba4-c913-11eb-96bf-00505686c5e6",
-      "purchased": false,
-      "learning_days": 0,
-      "purchased_time": null,
-      "secondary_type": 0,
-      "vocabulary": 7100,
-      "vocab_tags": [
-       {
-        "name": "中高考词汇",
-        "count": 791
-       },
-       {
-        "name": "四六级词汇",
-        "count": 2127
-       },
-       {
-        "name": "考研词汇",
-        "count": 537
-       },
-       {
-        "name": "出国留学词汇",
-        "count": 124
-       }
-      ],
-      "lexile": 0,
-      "parental_control": false,
-      "subscribed": null,
-      "area": 0,
-      "display_big_pic": false,
-      "display_style": 0,
-      "parent_uuid": "8a695f40-1da1-11e6-bcc9-000c29ffef9b",
-      "excerpt": "取材自《国家地理》英文原版期刊及官网，集文化、自然、旅游、科学4大主题。地道美音原文朗读+生动双语精讲，带你紧跟知识前沿的同时，轻松提升英语表达。",
-      "create_time": "2025-11-28T18:09:56Z",
-      "update_time": "2025-11-28T18:09:56Z",
-      "sort_time": "2021-06-09T17:08:35Z",
-      "child_count": 58,
-      "download_count": 4760,
-      "purchase_type": 512,
-      "user_purchase_status": 0,
-      "file_size": 414655268,
-      "tags": [],
-      "scm": "",
-      "author_info": {
-       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/9a707a51-9779-11eb-bb28-005056869af6",
-       "user_id": "9a707a51-9779-11eb-bb28-005056869af6",
-       "nick_name": "md@ngworld.cn",
-       "gender": null
-      },
-      "has_handout": false,
-      "word_count": 5891,
-      "uuid": "08004ba4-c913-11eb-96bf-00505686c5e6",
-      "title": "国家地理·百科精读（第六期）",
-      "language": "en",
-      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=08004ba4-c913-11eb-96bf-00505686c5e6&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
-      "item_type": 1,
-      "item_action": 10,
-      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/7133bb2e-f37f-4d23-bef6-6a4a2c6dadb4.jpg?stamp=1623265796000",
-      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/78821134-7ee8-4848-bddf-eabb74920e6d.jpg?stamp=1623265796000"
-     },
-     {
-      "book_id": "02f7b9d6-5c90-442e-9a15-95a409aee3d3",
-      "purchased": false,
-      "learning_days": 0,
-      "purchased_time": null,
-      "secondary_type": 0,
-      "vocabulary": 9500,
-      "vocab_tags": [
-       {
-        "name": "中高考词汇",
-        "count": 553
-       },
-       {
-        "name": "四六级词汇",
-        "count": 1442
-       },
-       {
-        "name": "考研词汇",
-        "count": 320
-       },
-       {
-        "name": "出国留学词汇",
-        "count": 32
-       }
-      ],
-      "lexile": 0,
-      "parental_control": false,
-      "subscribed": null,
-      "area": 0,
-      "display_big_pic": false,
-      "display_style": 0,
-      "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
-      "excerpt": "告别哑巴英语，实现交流自如。重点解决英语听说读写中说的内容，学会用正确的语法规则，地道的英语表达精准、有观点、有逻辑地传达你想要传递的内容和信息。\r\n\r\n购买课程后可以添加微信pennyenglish2024，加入答疑社群，获取课程PDF资料。",
-      "create_time": "2026-11-21T11:54:38Z",
-      "update_time": "2026-11-21T11:54:38Z",
-      "sort_time": "2025-08-12T14:18:53Z",
-      "child_count": 63,
-      "download_count": 21910,
-      "purchase_type": 512,
-      "user_purchase_status": 0,
-      "file_size": 29221698099,
-      "tags": [],
-      "scm": "",
-      "author_info": {
-       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/f495f362-7f92-11e8-80f7-000c29055b24",
-       "user_id": "f495f362-7f92-11e8-80f7-000c29055b24",
-       "nick_name": "潘妮的英语加油站",
-       "gender": null
-      },
-      "has_handout": false,
-      "word_count": 9787,
-      "uuid": "02f7b9d6-5c90-442e-9a15-95a409aee3d3",
-      "title": "听口直通自由—口语输出课",
-      "language": "en",
-      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=02f7b9d6-5c90-442e-9a15-95a409aee3d3&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
-      "item_type": 1,
-      "item_action": 10,
-      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/0418cd29-fb2c-4acc-9df9-af40bf7f9d78.jpg?stamp=1795265678454",
-      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/475474a8-0ada-4374-8296-99bccdf0f2ed.jpg?stamp=1795265678454"
+      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/652b824c-0198-4257-877e-e80595f27ff1.jpg?stamp=-62135596800000",
+      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/19aac1f2-94f4-4c91-8344-4811639b04cd.jpg?stamp=-62135596800000"
      },
      {
       "book_id": "1f7dd563-1cfc-40e5-a4cc-f8f003bb9c7e",
@@ -263,7 +294,7 @@
       "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/ec991081-8c80-4b8f-9283-7a596c06942f.jpg?stamp=-62135596800000"
      },
      {
-      "book_id": "24bdea85-8de5-42f2-b01f-d96f6a50811d",
+      "book_id": "2de9dc47-beda-441a-ad92-dce17fe5eae6",
       "purchased": false,
       "learning_days": 0,
       "purchased_time": null,
@@ -277,140 +308,87 @@
       "display_big_pic": false,
       "display_style": 0,
       "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
-      "excerpt": "Albert带你用美剧口语，学习排行榜稳居第一的《老友记》，轻松开口说英语！本课程共60篇。\r\n\r\n随课附赠影视原声片段集，方便课后复习。",
-      "create_time": "2025-11-28T12:34:09Z",
-      "update_time": "2025-08-20T23:56:25Z",
-      "sort_time": "2019-12-30T14:09:09Z",
-      "child_count": 60,
-      "download_count": 110122,
-      "purchase_type": 512,
+      "excerpt": "精选Michael老师主讲的「精听党丨每日外刊」30篇（选材范围：2021年8月-2021年11月）。精讲英语主流外刊文章，外教带读+语音干货讲义+每日习题巩固，带你一起学用英语思维读外刊😉",
+      "create_time": "2025-11-28T22:49:13Z",
+      "update_time": "2025-11-28T22:49:13Z",
+      "sort_time": "2022-12-23T22:49:13Z",
+      "child_count": 30,
+      "download_count": 0,
+      "purchase_type": 256,
       "user_purchase_status": 0,
-      "file_size": 662011423,
-      "tags": [],
-      "scm": "",
-      "author_info": {
-       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/9557d28b-dd7f-11e8-8ab3-000c29e6fad9",
-       "user_id": "9557d28b-dd7f-11e8-8ab3-000c29e6fad9",
-       "nick_name": "Albert英语研习社",
-       "gender": null
-      },
-      "has_handout": false,
-      "word_count": 19006,
-      "uuid": "24bdea85-8de5-42f2-b01f-d96f6a50811d",
-      "title": "跟老友记趣学口语",
-      "language": "en",
-      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=24bdea85-8de5-42f2-b01f-d96f6a50811d&needlogin=true&purchaseactivity=jingting&skiptheme=true&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}",
-      "item_type": 1,
-      "item_action": 10,
-      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/a3708516-ea07-4a31-9ba5-3cbff49fa797.jpg?stamp=1755741385580",
-      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/d491cd19-4c29-4d1b-acd7-b422f788c318.jpg?stamp=1755741385580"
-     },
-     {
-      "book_id": "fe33aec0-b8c3-4bc3-9149-8bbbcf38aaa7",
-      "purchased": false,
-      "learning_days": 0,
-      "purchased_time": null,
-      "secondary_type": 0,
-      "vocabulary": 0,
-      "vocab_tags": [],
-      "lexile": 0,
-      "parental_control": false,
-      "subscribed": null,
-      "area": 0,
-      "display_big_pic": false,
-      "display_style": 0,
-      "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
-      "excerpt": "本专辑精选8篇经济学人文章，由北大硕士桃子老师，用「精读视频配套精读笔记」的形式，从字、词、句、逻辑、背景、翻译等方面，彻底吃透8篇精选外刊，提升词汇量、英语阅读、写作、翻译、逻辑等能力。",
-      "create_time": "2024-05-22T14:29:08Z",
-      "update_time": "2024-05-22T14:29:08Z",
-      "sort_time": "2023-11-21T10:58:59Z",
-      "child_count": 40,
-      "download_count": 10967,
-      "purchase_type": 512,
-      "user_purchase_status": 0,
-      "file_size": 8563677417,
-      "tags": [],
-      "scm": "",
-      "author_info": {
-       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/509de754-82b2-11ee-bb5c-00505686ae9b",
-       "user_id": "509de754-82b2-11ee-bb5c-00505686ae9b",
-       "nick_name": "林小鹿英语精读",
-       "gender": null
-      },
-      "has_handout": false,
-      "uuid": "fe33aec0-b8c3-4bc3-9149-8bbbcf38aaa7",
-      "title": "林小鹿经济学人精读",
-      "language": "en",
-      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=fe33aec0-b8c3-4bc3-9149-8bbbcf38aaa7&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
-      "item_type": 1,
-      "item_action": 10,
-      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/d93f9969-6496-4c46-9118-62b6be81e56d.jpg?stamp=1716395348633",
-      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/c1b96019-92e8-477c-baf1-0f6319732999.jpg?stamp=1716395348633"
-     },
-     {
-      "book_id": "28a44fc8-8167-11eb-9f05-00505686c5e6",
-      "purchased": false,
-      "learning_days": 0,
-      "purchased_time": null,
-      "secondary_type": 0,
-      "vocabulary": 7000,
-      "vocab_tags": [
-       {
-        "name": "中高考词汇",
-        "count": 689
-       },
-       {
-        "name": "四六级词汇",
-        "count": 1871
-       },
-       {
-        "name": "考研词汇",
-        "count": 486
-       },
-       {
-        "name": "出国留学词汇",
-        "count": 99
-       }
+      "tags": [
+       "中级",
+       "双语",
+       "测评",
+       "语音讲义"
       ],
+      "scm": "",
+      "author_info": {
+       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/71531531-d110-11e8-8101-000c29055b24",
+       "user_id": "71531531-d110-11e8-8101-000c29055b24",
+       "nick_name": "英文早点",
+       "gender": null
+      },
+      "has_handout": false,
+      "uuid": "2de9dc47-beda-441a-ad92-dce17fe5eae6",
+      "title": "大学英语_外刊精读 | Michael精选_第三季",
+      "language": "en",
+      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=2de9dc47-beda-441a-ad92-dce17fe5eae6&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
+      "item_type": 1,
+      "item_action": 10,
+      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/b1b96518-21ae-4f30-81c7-ff98526c74bd.jpg?stamp=1671839353000",
+      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/1bb307f3-02c9-451b-a271-4f07c1d0028f.jpg?stamp=1671839353000"
+     },
+     {
+      "book_id": "f2897913-a779-4fce-a144-fa31327883e8",
+      "purchased": false,
+      "learning_days": 0,
+      "purchased_time": null,
+      "secondary_type": 0,
+      "vocabulary": 0,
+      "vocab_tags": [],
       "lexile": 0,
       "parental_control": false,
       "subscribed": null,
       "area": 0,
       "display_big_pic": false,
       "display_style": 0,
-      "parent_uuid": "8a695f40-1da1-11e6-bcc9-000c29ffef9b",
-      "excerpt": "取材自《国家地理》英文原版期刊及官网，集文化、自然、旅游、科学4大主题。地道美音原文朗读+生动双语精讲，带你紧跟知识前沿的同时，轻松提升英语表达。",
-      "create_time": "2025-11-28T14:00:52Z",
-      "update_time": "2025-11-28T14:00:52Z",
-      "sort_time": "2021-03-10T13:09:23Z",
-      "child_count": 41,
-      "download_count": 120867,
-      "purchase_type": 512,
+      "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
+      "excerpt": "精选Michael老师主讲的「精听党丨每日外刊」30篇（选材范围：2021年11月-2022年3月）。精讲英语主流外刊文章，外教带读+语音干货讲义+每日习题巩固，带你一起学用英语思维读外刊😉",
+      "create_time": "2025-11-28T22:49:35Z",
+      "update_time": "2025-11-28T22:49:35Z",
+      "sort_time": "2022-12-23T22:49:35Z",
+      "child_count": 30,
+      "download_count": 0,
+      "purchase_type": 256,
       "user_purchase_status": 0,
-      "file_size": 237750052,
-      "tags": [],
+      "tags": [
+       "中级",
+       "双语",
+       "测评",
+       "语音讲义"
+      ],
       "scm": "",
       "author_info": {
-       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/9a707a51-9779-11eb-bb28-005056869af6",
-       "user_id": "9a707a51-9779-11eb-bb28-005056869af6",
-       "nick_name": "md@ngworld.cn",
+       "avatar_url": "https://api.frdic.com/api/v3/user/avatar/71531531-d110-11e8-8101-000c29055b24",
+       "user_id": "71531531-d110-11e8-8101-000c29055b24",
+       "nick_name": "英文早点",
        "gender": null
       },
       "has_handout": false,
-      "word_count": 5583,
-      "uuid": "28a44fc8-8167-11eb-9f05-00505686c5e6",
-      "title": "国家地理·百科精读（第一期）",
+      "uuid": "f2897913-a779-4fce-a144-fa31327883e8",
+      "title": "大学英语_外刊精读 | Michael精选_第四季",
       "language": "en",
-      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=28a44fc8-8167-11eb-9f05-00505686c5e6&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
+      "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=f2897913-a779-4fce-a144-fa31327883e8&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
       "item_type": 1,
       "item_action": 10,
-      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/7db44655-c6be-4f56-aba9-23835b9cd214.jpg?stamp=1616166052000",
-      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/e25b1a37-f383-4975-9aac-12f33e3b6499.jpg?stamp=1616166052000"
+      "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/662efa2b-7784-4ebb-b22f-68df6d185b81.jpg?stamp=1671839375000",
+      "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/f4aeba32-5138-4cbe-8b03-114f592e6e80.jpg?stamp=1671839375000"
      }
     ],
     "class_info": {
      "name": "留学党必备",
-     "intro": "世界那么大，我想去看看！雅思托��真题，留学党的备考资料尽在这里～",
+     "intro": "世界那么大，我想去看看！雅思托福真题，留学党的备考资料尽在这里～",
      "avatar": "https://static.eudic.net/studyplan/class/5db79963-396d-442c-acef-999c793595a7.png?_=112010523561",
      "owner": {
       "userId": "cb258e4e-8fae-11e8-9331-000c29e6fad9",
@@ -1046,10 +1024,10 @@
         "z_index": 0,
         "z_weight": 0.5,
         "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
-        "excerpt": "本合辑选材为《小谢尔顿》第一季10-22集。\r\n\r\n免费永久答疑服务，有问必答\r\n赠独创10000字英语宝典《如何看美剧学英语》\r\n加我微信：zimuzu",
-        "create_time": "2025-11-28T14:16:00Z",
-        "update_time": "2025-11-28T14:16:00Z",
-        "sort_time": "2021-11-19T14:16:00Z",
+        "excerpt": "本合辑选材为《小谢尔顿》第一季1-9集。\r\n\r\n免费永久答疑服务，有问必答\r\n赠独创10000字英语宝典《如何看美剧学英语》\r\n加我微信：zimuzu",
+        "create_time": "2025-11-28T14:12:38Z",
+        "update_time": "2025-11-28T14:12:38Z",
+        "sort_time": "2021-11-19T14:12:38Z",
         "download_count": 0,
         "purchase_type": 256,
         "tags": [],
@@ -1061,14 +1039,14 @@
          "gender": null
         },
         "has_handout": false,
-        "uuid": "8b881471-4908-11ec-8804-00505686c5e6",
-        "title": "看美剧《小谢尔顿》学英语 第3+4+5合辑",
+        "uuid": "139e6dc1-4908-11ec-8804-00505686c5e6",
+        "title": "看美剧《小谢尔顿》学英语 第1+2合辑",
         "language": "en",
-        "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=8b881471-4908-11ec-8804-00505686c5e6&needlogin=true&purchaseactivity=jingting&timezone={timezone}&skiptheme=true&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}",
+        "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=139e6dc1-4908-11ec-8804-00505686c5e6&needlogin=true&purchaseactivity=jingting&timezone={timezone}&skiptheme=true&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}",
         "item_type": 1,
         "item_action": 10,
-        "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/fb094f83-6e0b-4293-a00d-41d904735b08.jpg?stamp=1637334960000",
-        "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/cb6702a8-fe41-4bc7-b196-b56492fb3298.jpg?stamp=1637334960000"
+        "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/4b7a7028-d83c-471e-9880-91728097c766.jpg?stamp=1637334758000",
+        "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/5a3d0c43-2e4e-4cff-b7e2-7a1e38d53f7d.jpg?stamp=1637334758000"
        },
        {
         "vocabulary": 3800,
@@ -1209,7 +1187,7 @@
         "update_time": "2026-04-09T01:36:32Z",
         "sort_time": "2026-04-02T15:30:34Z",
         "child_count": 21,
-        "download_count": 43831,
+        "download_count": 43859,
         "purchase_type": 256,
         "file_size": 138039691,
         "tags": [],
@@ -1307,7 +1285,7 @@
         "update_time": "2025-04-11T12:57:31Z",
         "sort_time": "2025-04-11T12:57:31Z",
         "child_count": 38,
-        "download_count": 103719,
+        "download_count": 103741,
         "purchase_type": 256,
         "file_size": 204551205,
         "tags": [],
@@ -1405,7 +1383,7 @@
         "update_time": "2025-11-28T17:04:09Z",
         "sort_time": "2018-07-05T09:07:29Z",
         "child_count": 29,
-        "download_count": 2157022,
+        "download_count": 2157030,
         "purchase_type": 256,
         "file_size": 205588894,
         "tags": [
@@ -1424,23 +1402,23 @@
         "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/60745c6a-f97b-42c8-888a-94c21fe48903.jpg?stamp=1544551449000"
        },
        {
-        "vocabulary": 6400,
+        "vocabulary": 5100,
         "vocab_tags": [
          {
           "name": "中高考词汇",
-          "count": 1642
+          "count": 1023
          },
          {
           "name": "四六级词汇",
-          "count": 5387
+          "count": 2749
          },
          {
           "name": "考研词汇",
-          "count": 1930
+          "count": 805
          },
          {
           "name": "出国留学词汇",
-          "count": 507
+          "count": 114
          }
         ],
         "lexile": 0,
@@ -1453,50 +1431,56 @@
         "z_index": 2,
         "z_weight": 0.5,
         "parent_uuid": "a20f8635-73cd-4661-80d1-eeaf43d1185b",
-        "excerpt": "英音原声朗读，双语对照，搭配干货讲义和每日习题训练，41天带你读懂推理经典，和大侦探福尔摩斯一起探索真相。本书较适合词汇量6400以上的学员阅读😉",
-        "create_time": "2025-11-28T14:48:50Z",
-        "update_time": "2025-11-28T14:48:50Z",
-        "sort_time": "2017-11-30T16:17:12Z",
-        "child_count": 41,
-        "download_count": 1612578,
+        "excerpt": "双语对照，美音原声朗读，配合知识精讲和专项习题训练，21天带你精听细读《老人与海》，体味海明威的文字魅力。本书较适合词汇量5100以上的学员阅读😉",
+        "create_time": "2025-11-28T10:42:34Z",
+        "update_time": "2025-11-28T10:42:34Z",
+        "sort_time": "2018-01-03T14:24:51Z",
+        "child_count": 21,
+        "download_count": 1609306,
         "purchase_type": 256,
-        "file_size": 217486271,
+        "file_size": 271090187,
         "tags": [
          "精听党"
         ],
         "scm": "1.5.1.1",
+        "author_info": {
+         "avatar_url": "https://static.eudic.net/img/male.png",
+         "user_id": "00000000-0000-0000-0000-000000000000",
+         "nick_name": "豪爽的草莓冰茶",
+         "gender": null
+        },
         "has_handout": false,
-        "word_count": 43370,
-        "uuid": "3f258525-d5af-11e7-82f9-902b346f2ac5",
-        "title": "精听党 | 福尔摩斯探案之血字的研究",
+        "word_count": 26670,
+        "uuid": "2f22fbb8-f057-11e7-a0b0-000c29ffef9b",
+        "title": "精听党 | 老人与海",
         "language": "en",
-        "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=3f258525-d5af-11e7-82f9-902b346f2ac5&needlogin=true&purchaseactivity=jingting&timezone={timezone}&skiptheme=true&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}",
+        "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=2f22fbb8-f057-11e7-a0b0-000c29ffef9b&needlogin=true&purchaseactivity=jingting&timezone={timezone}&skiptheme=true",
         "item_type": 1,
         "item_action": 10,
-        "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/478ede2a-1620-4e19-98d6-15016dac0ba2.jpg?stamp=1661442530347",
-        "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/b9b40151-afdc-4b78-88d9-cc2c551f7929.jpg?stamp=1661442530347"
+        "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/21849ba5-5cd8-4998-8694-fcf4a9114b58.jpg?stamp=1647862954003",
+        "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/7837f155-b8c4-48c3-b557-5bd490097cfe.jpg?stamp=1647862954003"
        },
        {
-        "vocabulary": 4900,
+        "vocabulary": 6800,
         "vocab_tags": [
          {
           "name": "中高考词汇",
-          "count": 914
+          "count": 1547
          },
          {
           "name": "四六级词汇",
-          "count": 2633
+          "count": 4474
          },
          {
           "name": "考研词汇",
-          "count": 763
+          "count": 1568
          },
          {
           "name": "出国留学词汇",
-          "count": 81
+          "count": 442
          }
         ],
-        "lexile": 600,
+        "lexile": 0,
         "image_show_type": 0,
         "parental_control": false,
         "subscribed": null,
@@ -1506,28 +1490,28 @@
         "z_index": 3,
         "z_weight": 0.5,
         "parent_uuid": "a20f8635-73cd-4661-80d1-eeaf43d1185b",
-        "excerpt": "21天精听细读《小王子》，双语原文搭配语音讲解，还有测验题助你更好掌握😉",
-        "create_time": "2025-11-28T11:05:47Z",
-        "update_time": "2025-11-28T11:05:47Z",
-        "sort_time": "2017-11-15T10:24:37Z",
-        "child_count": 21,
-        "download_count": 9443361,
+        "excerpt": "美音原声朗读，双语对照，搭配语音讲义和每日习题训练，20天阅读美国经典文学之作《野性的呼唤》，带你探索生命的意义与力量。本书较适合词汇量6800以上的学员阅读😉",
+        "create_time": "2025-11-28T11:20:16Z",
+        "update_time": "2025-11-28T11:20:16Z",
+        "sort_time": "2018-02-06T09:20:55Z",
+        "child_count": 20,
+        "download_count": 1258557,
         "purchase_type": 256,
-        "file_size": 220755179,
+        "file_size": 389259359,
         "tags": [
          "精听党"
         ],
         "scm": "1.5.1.1",
         "has_handout": false,
-        "word_count": 20713,
-        "uuid": "818ca937-c9b4-11e7-82f8-902b346f2ac5",
-        "title": "精听党 | 小王子精读",
+        "word_count": 37257,
+        "uuid": "5b6a11af-0ae4-11e8-b7f2-000c29ffef9b",
+        "title": "精听党 | 野性的呼唤",
         "language": "en",
-        "source_url": "https://dict.eudic.net/jingting/bookdetail?appkey={appkey}&userid={userid}&needlogin=true&purchaseactivity=jingting&bookId=818ca937-c9b4-11e7-82f8-902b346f2ac5&skiptheme=true",
+        "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=5b6a11af-0ae4-11e8-b7f2-000c29ffef9b&needlogin=true&purchaseactivity=jingting&timezone={timezone}&skiptheme=true",
         "item_type": 1,
         "item_action": 10,
-        "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/02967ebe-0733-40cd-8da4-fd755cfec52b.jpg?stamp=1650369947052",
-        "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/54605fe0-a487-419b-a9a1-ef589fd2e48d.jpg?stamp=1650369947052"
+        "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/fe6c1980-472c-4744-b777-50d69ce9bd40.jpg?stamp=1652962816315",
+        "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/d6d9f2eb-d21d-464f-beed-b8480f97bcfe.jpg?stamp=1652962816315"
        },
        {
         "vocabulary": 5500,
@@ -1564,7 +1548,7 @@
         "update_time": "2025-11-28T11:26:40Z",
         "sort_time": "2018-03-06T08:55:06Z",
         "child_count": 41,
-        "download_count": 293551,
+        "download_count": 293555,
         "purchase_type": 256,
         "file_size": 297441592,
         "tags": [
@@ -1583,23 +1567,23 @@
         "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/73ad4563-6bf9-4aec-96ad-b7d3e0cee246.jpg?stamp=1527337600000"
        },
        {
-        "vocabulary": 7800,
+        "vocabulary": 4900,
         "vocab_tags": [
          {
           "name": "中高考词汇",
-          "count": 638
+          "count": 196
          },
          {
           "name": "四六级词汇",
-          "count": 1714
+          "count": 594
          },
          {
           "name": "考研词汇",
-          "count": 425
+          "count": 97
          },
          {
           "name": "出国留学词汇",
-          "count": 43
+          "count": 11
          }
         ],
         "lexile": 0,
@@ -1612,14 +1596,14 @@
         "z_index": 5,
         "z_weight": 0.5,
         "parent_uuid": "0e448d62-7609-11e5-ac87-000c29ffef9b",
-        "excerpt": "本专辑《肖维青英文原著精读课——纳尼亚传奇篇》选取纳尼亚系列首卷《狮子、女巫和魔衣柜》，由上海外国语大学教授领读，带你逐一击破上述问题。专辑包含220节精品课程，老师将解构情节、深入分析，讲解所涉知识点，还配有外教原声朗读和阅读测验。在引导你完成近4万词汇量的阅读体验的同时，提供高质量、立体化伴读，同步提升你的听、说、读、写能力。",
-        "create_time": "2025-01-15T17:21:17Z",
-        "update_time": "2025-01-15T17:21:17Z",
-        "sort_time": "2024-06-20T07:25:17Z",
-        "child_count": 138,
-        "download_count": 8851,
+        "excerpt": "本课程是上外博导肖维青老师的英文原著阅读课，课程包含《小王子》《爱丽丝漫游奇境记》《自私的巨人》《快乐王子》《夜莺与玫瑰》5个经典篇目，以阶梯式课程实现阅读水平从入门到进阶的提升。",
+        "create_time": "2025-11-28T14:19:00Z",
+        "update_time": "2026-07-18T11:31:00Z",
+        "sort_time": "2022-03-25T13:54:02Z",
+        "child_count": 182,
+        "download_count": 64541,
         "purchase_type": 256,
-        "file_size": 3424949283,
+        "file_size": 2833899234,
         "tags": [],
         "scm": "1.5.1.1",
         "author_info": {
@@ -1629,15 +1613,15 @@
          "gender": null
         },
         "has_handout": false,
-        "word_count": 37938,
-        "uuid": "4c9515da-f0e9-469b-8906-aece3be7115f",
-        "title": "肖维青英文原著精读课-纳尼亚传奇篇",
+        "word_count": 128183,
+        "uuid": "2a976f5c-8bdd-4818-8301-42fcb16aad49",
+        "title": "肖维青英文原著精读课",
         "language": "en",
-        "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=4c9515da-f0e9-469b-8906-aece3be7115f&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
+        "source_url": "https://dict.eudic.net/Courses/index/?appkey={appkey}&userid={userid}&courseId=2a976f5c-8bdd-4818-8301-42fcb16aad49&needlogin=true&purchaseactivity=jingting&timezone={timezone}&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
         "item_type": 1,
         "item_action": 10,
-        "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/a0399f52-2ff1-4026-bc17-0db0a4fd16fa.jpg?stamp=1736965277000",
-        "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/89bba8e6-55a9-4cce-a4c2-231e165146b1.jpg?stamp=1736965277000"
+        "image_url_thumbnail": "https://static.dedic.cn/MediaPool/ChannelImg/aa8ac9b3-52f5-423b-bfc4-dad6d02143e8.jpg?stamp=1784381460000",
+        "image_url_origin": "https://static.dedic.cn/MediaPool/ChannelImg/6c044751-4d70-4667-8951-7f2fdb1ccc35.jpg?stamp=1784381460000"
        }
       ],
       "media_list": [],
@@ -1688,7 +1672,7 @@
         "update_time": "2026-11-26T23:00:00Z",
         "sort_time": "2024-03-07T12:45:58Z",
         "child_count": 30,
-        "download_count": 576259,
+        "download_count": 576322,
         "purchase_type": 256,
         "file_size": 7691353084,
         "tags": [],
@@ -1794,7 +1778,7 @@
    },
    "detected": {
     "bookIds": [
-     "99059e5e-0542-4a59-bb51-67ea6ff1b94d"
+     "7829eb4d-a420-46b8-96c7-af10884758e0"
     ],
     "dayIdx": []
    },
@@ -1806,33 +1790,37 @@
      "nick_name": "心态好的树懒",
      "gender": null
     },
-    "desc": "我正在阅读《大学英语_外刊精读 | Wanderer选集_第五季》",
-    "date": "2026-11-28T16:00:09Z",
+    "desc": "我正在阅读看电影《时空恋旅人》学英语",
+    "date": "2026-11-28T16:08:49Z",
     "attachs": [
      {
       "title": "今日阅读",
-      "desc": "265字"
+      "desc": "509字"
      },
      {
       "title": "累计阅读",
-      "desc": "265字"
+      "desc": "509字"
      },
      {
       "title": "累计打卡",
       "desc": "0天"
      }
     ],
-    "sentence": "读外刊精选",
-    "sentence_cn": "学地道英语",
+    "sentence": "",
+    "sentence_cn": "第一周 第2课 | 蒂姆首次使用超能力",
     "bg_image_url": "https://static.eudic.net/jingting/xwz/c8db22bb-ca1f-47e7-af8c-51a7a02cec3d.jpg",
-    "thumbnail_url": "https://static.dedic.cn/MediaPool/ChannelImg/16a2a458-48bf-46eb-b8e7-81b5aebea6dd.jpg?stamp=1671839655000",
-    "excerpt": "外刊朗读，有声讲义\n每天二十分钟，学用英语思维读外刊\n更有每日配套测试习题\n学习效果同步追踪，见证你的改变",
+    "thumbnail_url": "https://static.dedic.cn/MediaPool/ChannelImg/80fa7177-4ef1-4ea7-a021-a70b559906a3.jpg?stamp=1683672000000",
+    "excerpt": "选取经典电影《时空恋旅人》\n字幕组组长亲授\n甩掉字幕看懂电影\nget地道英语表达",
     "bottom_left_corner": "坚持学习获赠精编版PDF讲义\r\n扫码跟我一起阅读",
-    "book_url": "https://dict.eudic.net/Courses/index/?appkey=eusoft_ting_en_android&userid={userid}&courseId=99059e5e-0542-4a59-bb51-67ea6ff1b94d&needlogin=true&purchaseactivity=jingting&timezone=8&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}&skiptheme=true",
+    "image_url": "https://static.eudic.net/jingting/xwz/11005d10-7839-4ddb-b75c-032d81f502bf.jpg",
+    "book_url": "https://dict.eudic.net/Courses/index/?appkey=eusoft_ting_en_android&userid={userid}&courseId=7829eb4d-a420-46b8-96c7-af10884758e0&needlogin=true&purchaseactivity=jingting&timezone=8&skiptheme=true&vc={vc}&lt={lt}&ft={ft}&tw={tw}&useragent={useragent}",
     "new_excerpt": "用几周时间，精听一本英语名著",
     "date_position": "left"
    },
-   "share_post": "skipped (TING_SHARE_POST 未開)"
+   "share_post": {
+    "code": 404,
+    "body": null
+   }
   }
  }
 }
