@@ -595,9 +595,22 @@ def ensure_ob_group(cid):
         r = req("POST", f"{BASE}/ting/AddChannelsToPrivateGroup",
                 data=[("groupId", gid), ("channelIds", cid)], timeout=60)
         log(f"  group bind: {r.status_code} {(r.text or '')[:60]}")
-        if r.status_code == 200:
+        # 成員驗證（11-28 教訓：只看 200 會把 success:false 也記成已綁＝永久 skip）
+        members = ""
+        try:
+            g2 = (req("POST", f"{BASE}/ting/GetPrivateGroups?withDefault=false",
+                      data="", timeout=40).json()
+                  .get("channelList", {}).get("UploadedChannels") or [])
+            members = json.dumps(next((g for g in g2 if g.get("Id") == gid), {}))
+        except Exception:
+            pass
+        verified = r.status_code == 200 and '"success":false' not in (r.text or "") \
+                   and (not members or cid in members)
+        if verified:
             binds.add(cid)
             wj(BINDS, sorted(binds))
+        else:
+            log(f"  group bind: 驗證未過（members={'?' if not members else ('in' if cid in members else 'OUT')}）——不記帳，下輪重試")
     except Exception as ex:
         log(f"  group err（非致命）: {str(ex)[:80]}")
 
@@ -639,12 +652,33 @@ def ensure_channel_cover(cid, name):
         if not fid:
             log("channel cover: 上傳失敗（下輪再試）")
             return
-        r2 = req("POST", f"{BASE}/ting/UpdatePrivateChannel",
-                 data={"id": cid, "name": ch.get("Name") or name, "thumb": fid,
-                       "channelType": ch.get("ChannelType") or "",
-                       "description": html.unescape(ch.get("Description") or "")},
-                 timeout=60)
-        log(f"channel cover: UpdatePrivateChannel {r2.status_code} {(r2.text or '')[:50]}")
+        nm0 = ch.get("Name") or name
+        ct0 = ch.get("ChannelType") or ""
+        de0 = html.unescape(ch.get("Description") or "")
+        variants = [
+            ("channelId", {}),
+            ("id", {}),
+            ("itemtype7+channelId", {"qs": "itemtype=7"}),
+        ]
+        ok = False
+        for tag, _extra in variants:
+            url = f"{BASE}/ting/UpdatePrivateChannel" + ("?itemtype=7" if tag == "itemtype7+channelId" else "")
+            key = "channelId" if tag != "id" else "id"
+            r2 = req("POST", url,
+                     data={key: cid, "name": nm0, "thumb": fid,
+                           "channelType": ct0, "description": de0},
+                     timeout=60)
+            after = next((c for c in (req("GET", f"{BASE}/ting/GetPrivateChannels", timeout=45)
+                                       .json().get("channelList", {}).get("UploadedChannels") or [])
+                          if c.get("Id") == cid), {})
+            th = (after.get("Thumb") or "")
+            good = r2.status_code == 200 and '"success":false' not in (r2.text or "") \
+                   and th and "default.png" not in th
+            log(f"channel cover[{tag}]: {r2.status_code} {(r2.text or '')[:44]} | thumb after={th[:40] or 'EMPTY'}")
+            if good:
+                ok = True
+                break
+        return ok
     except Exception as ex:
         log(f"channel cover err（非致命）: {str(ex)[:80]}")
 
@@ -770,6 +804,10 @@ def main():
     cid = channel_id()
     ensure_ob_group(cid)
     ensure_channel_cover(cid, (rj(CHFILE, {}) or {}).get("name", ""))
+    # 全頻巡檢（11-28 教訓：只保 current 頻，舊頻的綁定假帳/缺封面永不自癒）
+    for _r in [x for x in (rj(OBCHS, []) or []) if x.get("cid") and x.get("cid") != cid]:
+        ensure_ob_group(_r["cid"])
+        ensure_channel_cover(_r["cid"], _r.get("name") or "")
     cover = channel_cover_bytes(cid)
     items = rss_items()
     catalog = [e for e in items if e["url"]]
