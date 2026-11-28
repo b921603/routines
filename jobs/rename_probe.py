@@ -16,9 +16,9 @@ for nm in (NEW, "On Being with Krista Tippett 1-100", "On Being with Krista Tipp
     log(f"IsBannedWords({nm[-10:]!r}): HTTP {r.status_code} {(r.text or '')[:100]}")
 # ②min.js 的 UpdatePrivateChannel 呼叫上下文
 js = OB.req("GET", "https://my.eudic.net/js/common.min.js", timeout=60).text or ""
-for m in list(re.finditer(r"UpdatePrivateChannel", js))[:3]:
-    seg = re.sub(r"\s+", " ", js[max(0, m.start()-500):m.end()+300])
-    log(f"JS ctx: …{seg[:700]}…")
+for m in list(re.finditer(r"UpdatePrivateChannel", js))[:2]:
+    seg = re.sub(r"\s+", " ", js[m.start():m.start()+1100])
+    log(f"JS ctx FULL: …{seg}…")
 # ③對照組：同名＋新 fid（排除名稱因素）
 chans = OB.req("GET", f"{OB.BASE}/ting/GetPrivateChannels", timeout=45).json()
 cur = next(c for c in chans["channelList"]["UploadedChannels"] if c["Id"] == cid)
@@ -26,7 +26,7 @@ img = OB.channel_cover_bytes(cid)
 fid = OB.upload_thumb(img)
 import html as H
 r = OB.req("POST", f"{OB.BASE}/ting/UpdatePrivateChannel",
-           data={"id": cid, "name": cur.get("Name"), "thumb": fid,
-                 "channelType": cur.get("ChannelType") or "",
+           data={"channelId": cid, "name": cur.get("Name"),
+                 "thumb": fid,
                  "description": H.unescape(cur.get("Description") or "")}, timeout=60)
-log(f"對照組(同名): HTTP {r.status_code} {(r.text or '')[:120]}")
+log(f"對照組(channelId): HTTP {r.status_code} {(r.text or '')[:120]}")
